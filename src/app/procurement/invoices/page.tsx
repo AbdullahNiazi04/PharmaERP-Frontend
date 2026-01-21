@@ -267,14 +267,8 @@ export default function InvoicesPage() {
   const handleAdd = useCallback(() => {
     setCurrentInvoice(null);
     setDrawerMode("create");
-    form.resetFields();
-    form.setFieldsValue({
-      // invoiceNumber: Left blank for auto-generation
-      status: "Pending",
-      invoiceDate: dayjs(),
-    });
     setDrawerOpen(true);
-  }, [form]);
+  }, []);
 
   const handleEdit = useCallback(
     (record: Invoice) => {
@@ -407,7 +401,12 @@ export default function InvoicesPage() {
 
   // Prepare form initial values with proper date objects
   const formInitialValues = useMemo(() => {
-    if (!currentInvoice) return undefined;
+    if (!currentInvoice) {
+      return {
+        status: "Pending",
+        invoiceDate: dayjs(),
+      };
+    };
     
     return {
       ...currentInvoice,
@@ -415,6 +414,15 @@ export default function InvoicesPage() {
       dueDate: currentInvoice.dueDate ? dayjs(currentInvoice.dueDate) : undefined,
     };
   }, [currentInvoice]);
+
+  // Handle draft data loading
+  const onDraftLoaded = useCallback((data: Record<string, unknown>) => {
+    return {
+      ...data,
+      invoiceDate: data.invoiceDate ? dayjs(data.invoiceDate as string) : undefined,
+      dueDate: data.dueDate ? dayjs(data.dueDate as string) : undefined,
+    };
+  }, []);
 
   return (
     <div style={{ padding: 24 }}>
@@ -452,6 +460,7 @@ export default function InvoicesPage() {
         form={form}
         initialValues={formInitialValues}
         entityId={currentInvoice?.id}
+        onDraftLoaded={onDraftLoaded}
       >
         <Divider titlePlacement="left" style={{ fontSize: 13 }}>
           <FileTextOutlined /> Invoice Details
