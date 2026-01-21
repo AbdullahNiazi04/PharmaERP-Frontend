@@ -111,7 +111,7 @@ export default function StatCard({
           </div>
 
           <Statistic
-            value={value}
+            value={typeof value === 'string' && !isNaN(Number(value)) ? Number(value) : value}
             prefix={prefix}
             suffix={suffix}
             precision={precision}
