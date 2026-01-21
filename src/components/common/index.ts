@@ -6,3 +6,4 @@ export { default as PDFPreviewModal } from './PDFPreviewModal';
 export { default as StatCard } from './StatCard';
 export { default as DocumentViewer } from './DocumentViewer';
 export { default as FileUpload } from './FileUpload';
+export { DynamicSelect } from './DynamicSelect';

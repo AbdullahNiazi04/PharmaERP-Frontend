@@ -19,6 +19,7 @@ import {
   CreateGoodsReceiptNoteDto,
   CreateInvoiceDto,
   CreatePaymentDto,
+  procurementOptionsApi,
 } from '@/lib/services';
 import { soundManager } from '@/lib/sounds';
 
@@ -682,6 +683,58 @@ export function useDeletePayment() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: procurementKeys.payments.all });
+    },
+  });
+}
+
+// ============ PROCUREMENT OPTIONS HOOKS ============
+
+export const procurementOptionsKeys = {
+  all: ['procurement-options'] as const,
+  byType: (type: string) => ['procurement-options', type] as const,
+};
+
+export function useProcurementOptions(type?: string) {
+  return useQuery({
+    queryKey: type ? procurementOptionsKeys.byType(type) : procurementOptionsKeys.all,
+    queryFn: () => procurementOptionsApi.getAll(type),
+    enabled: true,
+  });
+}
+
+export function useCreateProcurementOption() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: any) => procurementOptionsApi.create(data),
+    onSuccess: (_, variables) => {
+      message.success('Option created successfully');
+      soundManager.playSuccess();
+      queryClient.invalidateQueries({ queryKey: procurementOptionsKeys.all });
+      queryClient.invalidateQueries({ queryKey: procurementOptionsKeys.byType(variables.type) });
+    },
+    onError: () => {
+      message.error('Failed to create option');
+      soundManager.playError();
+    },
+  });
+}
+
+export function useDeleteProcurementOption() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => procurementOptionsApi.delete(id),
+    onSuccess: () => {
+      message.success('Option deleted successfully');
+      soundManager.playDelete();
+      queryClient.invalidateQueries({ queryKey: procurementOptionsKeys.all });
+    },
+    onError: () => {
+      message.error('Failed to delete option');
+      soundManager.playError();
     },
   });
 }

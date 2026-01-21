@@ -30,7 +30,7 @@ import {
   CloseCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { EnterpriseDataTable, FormDrawer, DocumentViewer } from "@/components/common";
+import { EnterpriseDataTable, FormDrawer, DocumentViewer, DynamicSelect } from "@/components/common";
 import {
   useVendors,
   useCreateVendor,
@@ -399,12 +399,10 @@ export default function VendorsPage() {
               label="Vendor Type"
               tooltip="Category of materials/services provided"
             >
-              <Select placeholder="Select type">
-                <Option value="Raw Material">Raw Material</Option>
-                <Option value="Packaging">Packaging</Option>
-                <Option value="Services">Services</Option>
-                <Option value="Equipment">Equipment</Option>
-              </Select>
+              <DynamicSelect 
+                type="VENDOR_TYPE" 
+                placeholder="Select type" 
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -537,11 +535,10 @@ export default function VendorsPage() {
         <Row gutter={16}>
           <Col span={8}>
             <Form.Item name="riskCategory" label="Risk Category">
-              <Select placeholder="Select risk">
-                <Option value="Low">Low</Option>
-                <Option value="Medium">Medium</Option>
-                <Option value="High">High</Option>
-              </Select>
+              <DynamicSelect 
+                type="RISK_CATEGORY" 
+                placeholder="Select risk" 
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -571,12 +568,10 @@ export default function VendorsPage() {
           </Col>
           <Col span={12}>
             <Form.Item name="currency" label="Currency">
-              <Select placeholder="Select currency">
-                <Option value="USD">USD - US Dollar</Option>
-                <Option value="EUR">EUR - Euro</Option>
-                <Option value="PKR">PKR - Pakistani Rupee</Option>
-                <Option value="GBP">GBP - British Pound</Option>
-              </Select>
+              <DynamicSelect 
+                type="CURRENCY" 
+                placeholder="Select currency" 
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -584,11 +579,10 @@ export default function VendorsPage() {
         <Row gutter={16}>
           <Col span={8}>
             <Form.Item name="paymentTerms" label="Payment Terms">
-              <Select placeholder="Select terms">
-                <Option value="Net-30">Net 30 Days</Option>
-                <Option value="Net-60">Net 60 Days</Option>
-                <Option value="Advanced">Advanced Payment</Option>
-              </Select>
+              <DynamicSelect 
+                type="PAYMENT_TERMS" 
+                placeholder="Select terms" 
+              />
             </Form.Item>
           </Col>
           <Col span={8}>

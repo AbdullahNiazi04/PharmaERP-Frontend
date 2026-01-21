@@ -28,7 +28,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { EnterpriseDataTable, FormDrawer, DocumentViewer } from "@/components/common";
+import { EnterpriseDataTable, FormDrawer, DocumentViewer, DynamicSelect } from "@/components/common";
 import {
   usePurchaseOrders,
   useCreatePurchaseOrder,
@@ -670,11 +670,10 @@ export default function PurchaseOrdersPage() {
           </Col>
           <Col span={8}>
             <Form.Item name="currency" label="Currency">
-              <Select placeholder="Select currency">
-                <Option value="PKR">PKR</Option>
-                <Option value="USD">USD</Option>
-                <Option value="EUR">EUR</Option>
-              </Select>
+              <DynamicSelect 
+                type="CURRENCY" 
+                placeholder="Select currency" 
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -682,22 +681,19 @@ export default function PurchaseOrdersPage() {
         <Row gutter={16}>
           <Col span={8}>
             <Form.Item name="paymentTerms" label="Payment Terms">
-              <Select placeholder="Select terms">
-                <Option value="Net-30">Net-30</Option>
-                <Option value="Net-60">Net-60</Option>
-                <Option value="Advance">Advance</Option>
-                <Option value="COD">Cash on Delivery</Option>
-              </Select>
+              <DynamicSelect 
+                type="PAYMENT_TERMS" 
+                placeholder="Select terms" 
+              />
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item name="incoterms" label="Incoterms">
-              <Select placeholder="Select incoterms" allowClear>
-                <Option value="EXW">EXW - Ex Works</Option>
-                <Option value="FOB">FOB - Free on Board</Option>
-                <Option value="CIF">CIF - Cost, Insurance, Freight</Option>
-                <Option value="DDP">DDP - Delivered Duty Paid</Option>
-              </Select>
+              <DynamicSelect 
+                type="INCOTERMS" 
+                placeholder="Select incoterms"
+                allowClear
+              />
             </Form.Item>
           </Col>
           <Col span={8}>

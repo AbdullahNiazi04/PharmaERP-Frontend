@@ -26,7 +26,7 @@ import {
   CloseCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { EnterpriseDataTable, FormDrawer, DocumentViewer } from "@/components/common";
+import { EnterpriseDataTable, FormDrawer, DocumentViewer, DynamicSelect } from "@/components/common";
 import {
   usePayments,
   useCreatePayment,
@@ -487,12 +487,10 @@ export default function PaymentsPage() {
               name="paymentMethod"
               label="Payment Method"
             >
-              <Select placeholder="Select method">
-                <Option value="Bank Transfer">Bank Transfer</Option>
-                <Option value="Cheque">Cheque</Option>
-                <Option value="Cash">Cash</Option>
-                <Option value="Credit Card">Credit Card</Option>
-              </Select>
+              <DynamicSelect 
+                type="PAYMENT_METHOD" 
+                placeholder="Select method" 
+              />
             </Form.Item>
           </Col>
         </Row>

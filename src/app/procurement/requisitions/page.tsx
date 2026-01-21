@@ -26,7 +26,7 @@ import {
   ShoppingOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { EnterpriseDataTable, FormDrawer, DocumentViewer } from "@/components/common";
+import { EnterpriseDataTable, FormDrawer, DocumentViewer, DynamicSelect } from "@/components/common";
 import {
   usePurchaseRequisitions,
   useCreatePurchaseRequisition,
@@ -355,19 +355,14 @@ export default function PurchaseRequisitionsPage() {
       key: "category",
       width: 120,
       render: (_: string, __: PurchaseRequisitionItem, index: number) => (
-        <Select
+        <DynamicSelect
+          type="CATEGORY"
           value={items[index]?.category}
           onChange={(val) => updateItem(index, "category", val)}
           placeholder="Select"
-          size="small"
           style={{ width: "100%" }}
           allowClear
-        >
-          <Option value="Raw Material">Raw Material</Option>
-          <Option value="Packaging">Packaging</Option>
-          <Option value="Equipment">Equipment</Option>
-          <Option value="Services">Services</Option>
-        </Select>
+        />
       ),
     },
     {
@@ -391,17 +386,12 @@ export default function PurchaseRequisitionsPage() {
       key: "uom",
       width: 80,
       render: (_: string, __: PurchaseRequisitionItem, index: number) => (
-        <Select
+        <DynamicSelect
+          type="UOM"
           value={items[index]?.uom}
           onChange={(val) => updateItem(index, "uom", val)}
-          size="small"
           style={{ width: "100%" }}
-        >
-          <Option value="Kg">Kg</Option>
-          <Option value="L">L</Option>
-          <Option value="Pcs">Pcs</Option>
-          <Option value="Box">Box</Option>
-        </Select>
+        />
       ),
     },
     {
@@ -503,14 +493,10 @@ export default function PurchaseRequisitionsPage() {
           </Col>
           <Col span={8}>
             <Form.Item name="priority" label="Priority">
-              <Select placeholder="Select priority">
-                <Option value="Normal">
-                  <Tag color="blue">Normal</Tag>
-                </Option>
-                <Option value="Urgent">
-                  <Tag color="red">Urgent</Tag>
-                </Option>
-              </Select>
+              <DynamicSelect 
+                type="PRIORITY" 
+                placeholder="Select priority" 
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -531,15 +517,10 @@ export default function PurchaseRequisitionsPage() {
           </Col>
           <Col span={8}>
             <Form.Item name="department" label="Department">
-              <Select placeholder="Select department">
-                <Option value="Production">Production</Option>
-                <Option value="Quality Control">Quality Control</Option>
-                <Option value="Research & Development">R&D</Option>
-                <Option value="Warehouse">Warehouse</Option>
-                <Option value="Packaging">Packaging</Option>
-                <Option value="Maintenance">Maintenance</Option>
-                <Option value="Administration">Administration</Option>
-              </Select>
+              <DynamicSelect 
+                type="DEPARTMENT" 
+                placeholder="Select department" 
+              />
             </Form.Item>
           </Col>
           <Col span={8}>

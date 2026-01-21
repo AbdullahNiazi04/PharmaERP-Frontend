@@ -688,3 +688,35 @@ export const paymentsApi = {
     await api.delete(`/payments/${id}`);
   },
 };
+
+// Procurement Options (Dynamic Dropdowns)
+export interface ProcurementOption {
+  id: string;
+  type: string;
+  label: string;
+  value: string;
+  isSystem?: boolean;
+}
+
+export interface CreateProcurementOptionDto {
+  type: string;
+  label: string;
+  value: string;
+  isSystem?: boolean;
+}
+
+export const procurementOptionsApi = {
+  getAll: async (type?: string): Promise<ProcurementOption[]> => {
+    const response = await api.get('/procurement-options', { params: { type } });
+    return response.data;
+  },
+
+  create: async (data: CreateProcurementOptionDto): Promise<ProcurementOption> => {
+    const response = await api.post('/procurement-options', data);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/procurement-options/${id}`);
+  },
+};
