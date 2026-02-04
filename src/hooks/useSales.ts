@@ -48,6 +48,7 @@ export interface CreateSalesOrderDto {
   customerId: string;
   orderDate: string;
   deliveryDate?: string;
+  status?: "Draft" | "Confirmed" | "Dispatched" | "Delivered" | "Cancelled";
   items: SalesOrderItem[];
 }
 
@@ -221,6 +222,17 @@ export function useDispatchSalesOrder() {
   return useMutation({
     mutationFn: ({ id, warehouseId, transporter }: { id: string; warehouseId: string; transporter: string }) =>
       salesApi.dispatch(id, warehouseId, transporter),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: salesKeys.all });
+    },
+  });
+}
+
+export function useConfirmSalesOrder() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: string) => salesApi.update(id, { status: "Confirmed" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: salesKeys.all });
     },
