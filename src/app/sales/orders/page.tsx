@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import {
   Form,
   Input,
+  InputNumber,
   Select,
   Row,
   Col,
@@ -15,6 +16,9 @@ import {
   Card,
   Statistic,
   DatePicker,
+  Button,
+  Space,
+  Table,
 } from "antd";
 import {
   ShoppingCartOutlined,
@@ -23,6 +27,9 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CarOutlined,
+  PlusOutlined,
+  DeleteOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { EnterpriseDataTable, FormDrawer, DocumentViewer } from "@/components/common";
@@ -35,6 +42,7 @@ import {
   SalesOrder,
   CreateSalesOrderDto,
 } from "@/hooks/useSales";
+import { useFinishedGoods } from "@/hooks/useFinishedGoods";
 import type { ColumnsType } from "antd/es/table";
 
 const { Option } = Select;
@@ -60,6 +68,7 @@ export default function SalesOrdersPage() {
   // API Hooks
   const { data: customers = [] } = useCustomers();
   const { data: salesOrders = [], isLoading, refetch } = useSalesOrders();
+  const { data: finishedGoods = [] } = useFinishedGoods();
   const createOrder = useCreateSalesOrder();
   const updateOrder = useUpdateSalesOrder();
   const deleteOrder = useDeleteSalesOrder();
@@ -71,6 +80,21 @@ export default function SalesOrdersPage() {
       label: c.name,
     }));
   }, [customers]);
+
+  // Product options for select
+  const productOptions = useMemo(() => {
+    return finishedGoods.map((fg) => ({
+      value: fg.id,
+      label: `${fg.itemCode} - ${fg.itemName}`,
+      mrp: Number(fg.mrp) || 0,
+    }));
+  }, [finishedGoods]);
+
+  // Get product name by ID
+  const getProductName = useCallback((itemId: string) => {
+    const product = finishedGoods.find((fg) => fg.id === itemId);
+    return product ? `${product.itemCode} - ${product.itemName}` : itemId;
+  }, [finishedGoods]);
 
   // Get customer name by ID
   const getCustomerName = useCallback((customerId: string) => {
@@ -316,11 +340,26 @@ export default function SalesOrdersPage() {
 
   const handleSubmit = useCallback(
     async (values: Record<string, unknown>) => {
+      // Build items array from form
+      const formItems = (values.items as Array<{
+        itemId: string;
+        quantity: number;
+        unitPrice: number;
+        discount?: number;
+        tax?: number;
+      }>) || [];
+
       const data: CreateSalesOrderDto = {
         customerId: values.customerId as string,
         orderDate: (values.orderDate as dayjs.Dayjs)?.format("YYYY-MM-DD"),
         deliveryDate: (values.deliveryDate as dayjs.Dayjs)?.format("YYYY-MM-DD"),
-        items: [], // Items would be added in a more complex implementation
+        items: formItems.map(item => ({
+          itemId: item.itemId,
+          quantity: item.quantity || 0,
+          unitPrice: item.unitPrice || 0,
+          discount: item.discount || 0,
+          tax: item.tax || 0,
+        })),
       };
 
       try {
@@ -405,14 +444,14 @@ export default function SalesOrdersPage() {
       {/* Create/Edit Drawer */}
       <FormDrawer
         title="Sales Order"
-        formKey="sales-order-v2"
+        formKey="sales-order-v3"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onSubmit={handleSubmit}
         onDelete={drawerMode === "edit" && currentOrder ? () => handleDelete(currentOrder) : undefined}
         loading={createOrder.isPending || updateOrder.isPending}
         mode={drawerMode}
-        width={550}
+        width={800}
         form={form}
         initialValues={formInitialValues}
         entityId={currentOrder?.id}
@@ -468,6 +507,118 @@ export default function SalesOrdersPage() {
             </Form.Item>
           </Col>
         </Row>
+
+        <Divider styles={{ content: { margin: 0 } }} style={{ fontSize: 13 }}>
+          <DollarOutlined /> Order Details
+        </Divider>
+
+        <Form.List name="items">
+          {(fields, { add, remove }) => (
+            <>
+              {fields.map(({ key, name, ...restField }) => {
+                return (
+                  <Card
+                    key={key}
+                    size="small"
+                    style={{ marginBottom: 12, background: "#fafafa" }}
+                    bodyStyle={{ padding: 12 }}
+                  >
+                    <Row gutter={12} align="middle">
+                      <Col span={8}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "itemId"]}
+                          label="Product"
+                          rules={[{ required: true, message: "Select product" }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <Select
+                            placeholder="Select product"
+                            options={productOptions}
+                            showSearch
+                            filterOption={(input, option) =>
+                              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                            }
+                            onChange={(value) => {
+                              // Auto-fill unit price from MRP
+                              const product = productOptions.find((p) => p.value === value);
+                              if (product) {
+                                const items = form.getFieldValue("items") || [];
+                                items[name] = { ...items[name], unitPrice: product.mrp };
+                                form.setFieldsValue({ items });
+                              }
+                            }}
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col span={3}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "quantity"]}
+                          label="Qty"
+                          rules={[{ required: true, message: "Required" }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber min={1} style={{ width: "100%" }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={4}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "unitPrice"]}
+                          label="Unit Price"
+                          rules={[{ required: true, message: "Required" }]}
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber min={0} style={{ width: "100%" }} prefix="₨" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={3}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "discount"]}
+                          label="Discount"
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber min={0} style={{ width: "100%" }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={3}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, "tax"]}
+                          label="Tax"
+                          style={{ marginBottom: 0 }}
+                        >
+                          <InputNumber min={0} style={{ width: "100%" }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={2}>
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => remove(name)}
+                          style={{ marginTop: 22 }}
+                        />
+                      </Col>
+                    </Row>
+                  </Card>
+                );
+              })}
+              <Form.Item>
+                <Button
+                  type="dashed"
+                  onClick={() => add()}
+                  block
+                  icon={<PlusOutlined />}
+                >
+                  Add Product Item
+                </Button>
+              </Form.Item>
+            </>
+          )}
+        </Form.List>
       </FormDrawer>
 
       {/* Document Viewer */}

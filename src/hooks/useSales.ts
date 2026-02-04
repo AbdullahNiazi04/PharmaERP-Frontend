@@ -32,6 +32,7 @@ export interface SalesOrder {
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
+  items?: SalesOrderItem[];
 }
 
 export interface SalesOrderItem {
