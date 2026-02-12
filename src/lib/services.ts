@@ -901,6 +901,10 @@ export const rmqcApi = {
     const response = await api.get('/rmqc');
     return response.data;
   },
+  create: async (data: CreateRmqcDto): Promise<RmqcInspection> => {
+    const response = await api.post('/rmqc', data);
+    return response.data;
+  },
   getById: async (id: string): Promise<RmqcInspection> => {
     const response = await api.get(`/rmqc/${id}`);
     return response.data;
