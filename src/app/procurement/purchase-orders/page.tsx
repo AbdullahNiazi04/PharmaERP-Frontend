@@ -46,10 +46,10 @@ const { Text } = Typography;
 // Status color mapping
 const statusColors: Record<string, string> = {
   Draft: "default",
-  Submitted: "processing",
+  Issued: "processing",
   Approved: "success",
-  "Partially Received": "orange",
-  Completed: "green",
+  Partial: "orange",
+  Closed: "green",
   Cancelled: "red",
 };
 
@@ -86,8 +86,8 @@ export default function PurchaseOrdersPage() {
   // Calculate summary stats
   const summaryStats = useMemo(() => {
     const total = purchaseOrders.length;
-    const pending = purchaseOrders.filter(po => po.status === "Submitted" || po.status === "Draft").length;
-    const completed = purchaseOrders.filter(po => po.status === "Completed").length;
+    const pending = purchaseOrders.filter(po => po.status === "Issued" || po.status === "Draft").length;
+    const completed = purchaseOrders.filter(po => po.status === "Closed").length;
     const totalValue = purchaseOrders.reduce((sum, po) => sum + (Number(po.totalAmount) || 0), 0);
 
     return { total, pending, completed, totalValue };

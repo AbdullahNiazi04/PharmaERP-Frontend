@@ -102,7 +102,6 @@ export interface CreateVendorDto {
   paymentTerms?: string;
   creditLimit?: number;
   taxWithholdingPercent?: number;
-  taxWithholdingPercent?: number;
   vendorTags?: string[];
 }
 export type UpdateVendorDto = Partial<CreateVendorDto>;
@@ -206,7 +205,7 @@ export interface PurchaseRequisition {
   priority?: 'Normal' | 'Urgent';
   expectedDeliveryDate?: string;
   budgetReference?: string;
-  status?: 'Draft' | 'Submitted' | 'Approved' | 'Rejected' | 'Converted';
+  status?: 'Draft' | 'Pending_Approval' | 'Approved' | 'Rejected' | 'Converted';
   totalEstimatedCost?: number;
   items?: PurchaseRequisitionItem[];
   createdAt?: string;
@@ -289,7 +288,7 @@ export interface PurchaseOrder {
   subtotal?: number;
   taxAmount?: number;
   totalAmount?: number;
-  status?: 'Draft' | 'Submitted' | 'Approved' | 'Partially Received' | 'Completed' | 'Cancelled';
+  status?: 'Draft' | 'Issued' | 'Partial' | 'Closed' | 'Cancelled';
   items?: PurchaseOrderItem[];
   createdAt?: string;
   updatedAt?: string;
@@ -410,7 +409,7 @@ export interface ImportOrder {
   lcNumber?: string;
   customsRef?: string;
   portOfEntry?: string;
-  status: 'Pending' | 'In Transit' | 'At Port' | 'Customs Clearance' | 'Cleared' | 'Received';
+  status: 'Pending' | 'In_Transit' | 'At_Port' | 'Customs_Clearance' | 'Cleared' | 'Received';
   eta?: string;
   arrivalDate?: string;
   clearanceDate?: string;
@@ -434,7 +433,6 @@ export interface CreateImportOrderDto {
   portOfEntry?: string;
   status?: string;
   eta?: string;
-  arrivalDate?: string;
   arrivalDate?: string;
   clearanceDate?: string;
 }
@@ -816,7 +814,7 @@ export interface Payment {
   id: string;
   invoiceId: string;
   paymentDate: string;
-  paymentMethod?: 'Bank Transfer' | 'Cheque' | 'Cash' | 'Credit Card';
+  paymentMethod?: 'Bank_Transfer' | 'Cheque' | 'Cash' | 'Credit_Card';
   amountPaid: number;
   taxWithheld?: number;
   advanceAdjustments?: number;
@@ -829,7 +827,7 @@ export interface Payment {
 export interface CreatePaymentDto {
   invoiceId: string;
   paymentDate: string;
-  paymentMethod?: 'Bank Transfer' | 'Cheque' | 'Cash' | 'Credit Card';
+  paymentMethod?: 'Bank_Transfer' | 'Cheque' | 'Cash' | 'Credit_Card';
   amountPaid: number;
   taxWithheld?: number;
   advanceAdjustments?: number;

@@ -42,9 +42,9 @@ const { Text, Title } = Typography;
 // Status color mapping
 const statusColors: Record<string, string> = {
   Pending: "default",
-  "In Transit": "processing",
-  "At Port": "warning",
-  "Customs Clearance": "purple",
+  "In_Transit": "processing",
+  "At_Port": "warning",
+  "Customs_Clearance": "purple",
   Cleared: "success",
   Received: "green",
 };
@@ -216,7 +216,7 @@ export default function ImportsPage() {
   const summary = useMemo(() => {
     const total = importOrders.length;
     const pending = importOrders.filter(i => i.status === 'Pending').length;
-    const transit = importOrders.filter(i => i.status === 'In Transit').length;
+    const transit = importOrders.filter(i => i.status === 'In_Transit').length;
     const totalUsd = importOrders.reduce((acc, curr) => acc + Number(curr.amountUsd), 0);
     return { total, pending, transit, totalUsd };
   }, [importOrders]);

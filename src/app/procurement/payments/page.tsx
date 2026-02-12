@@ -50,10 +50,10 @@ const statusColors: Record<string, string> = {
 
 // Payment method color mapping
 const methodColors: Record<string, string> = {
-  "Bank Transfer": "blue",
+  "Bank_Transfer": "blue",
   Cash: "green",
   Cheque: "orange",
-  "Credit Card": "purple",
+  "Credit_Card": "purple",
 };
 
 export default function PaymentsPage() {
