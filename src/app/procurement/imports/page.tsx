@@ -266,13 +266,16 @@ export default function ImportsPage() {
 
       {summaryComponent}
 
-      <EnterpriseDataTable
+      <EnterpriseDataTable<ImportOrder>
+        title="Import Management"
+        subtitle="Manage international orders, shipments, and customs"
+        tableKey="import-orders"
         columns={columns}
         data={importOrders}
         loading={isLoading}
+        rowKey="id"
         onEdit={handleEdit}
         onDelete={handleDelete}
-        searchPlaceholder="Search by Import Number, Vendor, or BL..."
       />
 
       <FormDrawer
