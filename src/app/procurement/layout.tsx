@@ -53,6 +53,11 @@ const menuItems = [
     label: "Goods Receipt Notes",
   },
   {
+    key: "/procurement/rmqc",
+    icon: <CheckCircleOutlined />,
+    label: "RMQC",
+  },
+  {
     key: "/procurement/invoices",
     icon: <FileProtectOutlined />,
     label: "Invoices",
@@ -61,11 +66,6 @@ const menuItems = [
     key: "/procurement/payments",
     icon: <DollarOutlined />,
     label: "Payments",
-  },
-  {
-    key: "/procurement/rmqc",
-    icon: <CheckCircleOutlined />,
-    label: "RMQC",
   },
 ];
 

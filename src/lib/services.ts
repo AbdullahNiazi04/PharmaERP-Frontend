@@ -43,19 +43,21 @@ export interface RmqcInspection {
   inspector_name: string;
   description?: string;
   status: string;
+  inspector_id?: string;
   images?: string[];
   documents?: string[];
   created_at?: string;
   updated_at?: string;
   completed_at?: string;
-  goods_receipt_notes?: {
-    grn_number: string;
-    received_by: string;
+  // API returns camelCase for relations
+  goodsReceiptNotes?: {
+    grnNumber: string;
+    receivedBy: string;
   };
-  raw_material_batches?: {
-    batch_number: string;
-    raw_material_inventory?: {
-      raw_materials?: {
+  rawMaterialBatches?: {
+    batchNumber: string;
+    rawMaterialInventory?: {
+      rawMaterials?: {
         name: string;
         code: string;
       };
@@ -899,15 +901,11 @@ export const rmqcApi = {
     const response = await api.get('/rmqc');
     return response.data;
   },
-  getById: async (id: string): Promise<RmqcInspection> => {
+  getOne: async (id: string): Promise<RmqcInspection> => {
     const response = await api.get(`/rmqc/${id}`);
     return response.data;
   },
-  create: async (data: CreateRmqcDto): Promise<RmqcInspection> => {
-    const response = await api.post('/rmqc', data);
-    return response.data;
-  },
-  update: async (id: string, data: UpdateRmqcDto): Promise<RmqcInspection> => {
+  update: async (id: string, data: Partial<RmqcInspection> & { inspector_id?: string }): Promise<RmqcInspection> => {
     const response = await api.patch(`/rmqc/${id}`, data);
     return response.data;
   },
@@ -917,6 +915,36 @@ export const rmqcApi = {
   },
   fail: async (id: string): Promise<RmqcInspection> => {
     const response = await api.post(`/rmqc/${id}/fail`);
+    return response.data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/rmqc/${id}`);
+  },
+};
+
+export interface QcInspector {
+  id: string;
+  name: string;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const qcInspectorsApi = {
+  getAll: async () => {
+    const response = await api.get<QcInspector[]>('/qc-inspectors');
+    return response.data;
+  },
+  create: async (data: Omit<QcInspector, 'id' | 'created_at' | 'updated_at'>) => {
+    const response = await api.post<QcInspector>('/qc-inspectors', data);
+    return response.data;
+  },
+  update: async (id: string, data: Partial<QcInspector>) => {
+    const response = await api.patch<QcInspector>(`/qc-inspectors/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/qc-inspectors/${id}`);
     return response.data;
   },
 };

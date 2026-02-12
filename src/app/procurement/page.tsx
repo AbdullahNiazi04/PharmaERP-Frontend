@@ -82,6 +82,14 @@ const moduleCards = [
     borderColor: "#ffd591",
   },
   {
+    title: "RMQC",
+    description: "Quality Control for Raw Materials",
+    icon: <CheckCircleOutlined style={{ fontSize: 32, color: "#fa541c" }} />,
+    href: "/procurement/rmqc",
+    color: "#fff2e8",
+    borderColor: "#ffbb96",
+  },
+  {
     title: "Invoices",
     description: "Manage vendor invoices and payments due",
     icon: <FileProtectOutlined style={{ fontSize: 32, color: "#eb2f96" }} />,
@@ -96,14 +104,6 @@ const moduleCards = [
     href: "/procurement/payments",
     color: "#e6fffb",
     borderColor: "#87e8de",
-  },
-  {
-    title: "RMQC",
-    description: "Quality Control for Raw Materials",
-    icon: <CheckCircleOutlined style={{ fontSize: 32, color: "#fa541c" }} />,
-    href: "/procurement/rmqc",
-    color: "#fff2e8",
-    borderColor: "#ffbb96",
   },
 ];
 

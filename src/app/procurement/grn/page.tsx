@@ -19,6 +19,7 @@ import {
   Table,
   InputNumber,
   Switch,
+  Tooltip,
 } from "antd";
 import {
   InboxOutlined,
@@ -144,21 +145,18 @@ export default function GoodsReceiptNotesPage() {
         width: 140,
         render: (qcStatus: string, record: GoodsReceiptNote) => {
           if (!record.qcRequired) return <Tag>N/A</Tag>;
+          
+          let color = "orange"; // Pending
+          if (qcStatus === "Passed") color = "success";
+          if (qcStatus === "Failed") color = "error";
+          if (qcStatus === "Skipped") color = "default";
+
           return (
-            <Select
-              value={qcStatus || "Pending"}
-              size="small"
-              style={{ width: 120 }}
-              onChange={(value) => {
-                updateGRNStatus.mutate({ id: record.id, data: { qcStatus: value } });
-              }}
-              options={[
-                { label: <Tag color="orange">Pending</Tag>, value: "Pending" },
-                { label: <Tag color="success">Passed</Tag>, value: "Passed" },
-                { label: <Tag color="error">Failed</Tag>, value: "Failed" },
-                { label: <Tag color="default">Skipped</Tag>, value: "Skipped" },
-              ]}
-            />
+            <Tooltip title="Status managed via RMQC module">
+              <Tag color={color} style={{ cursor: 'default' }}>
+                {qcStatus || "Pending"}
+              </Tag>
+            </Tooltip>
           );
         },
       },
