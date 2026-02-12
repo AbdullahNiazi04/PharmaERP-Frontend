@@ -8,6 +8,7 @@ import { Tag, Button } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
+import type { ColumnsType } from "antd/es/table";
 
 const statusColors: Record<string, string> = {
   Pending: "orange",
@@ -22,7 +23,7 @@ export default function RmqcListPage() {
     queryFn: rmqcApi.getAll,
   });
 
-  const columns = [
+  const columns: ColumnsType<RmqcInspection> = [
     {
       title: "Inspection ID",
       dataIndex: "id",
@@ -96,7 +97,7 @@ export default function RmqcListPage() {
 
   return (
     <div style={{ padding: 24 }}>
-      <EnterpriseDataTable
+      <EnterpriseDataTable<RmqcInspection>
         title="RMQC Inspections"
         subtitle="Manage Raw Material Quality Checks"
         tableKey="rmqc"
