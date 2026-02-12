@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { rmqcApi, RmqcInspection } from "@/lib/services";
 import { EnterpriseDataTable } from "@/components/common";
-import { Tag, Button } from "antd";
+import { Tag, Button, Typography } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
@@ -15,6 +15,8 @@ const statusColors: Record<string, string> = {
   Passed: "green",
   Failed: "red",
 };
+
+const { Text } = Typography;
 
 export default function RmqcListPage() {
   const router = useRouter();
