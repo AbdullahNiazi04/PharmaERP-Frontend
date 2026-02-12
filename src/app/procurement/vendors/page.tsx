@@ -72,7 +72,8 @@ export default function VendorsPage() {
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
 
   // API Hooks
-  const { data: vendors = [], isLoading, refetch } = useVendors();
+  const [tagFilter, setTagFilter] = useState<string | undefined>(undefined);
+  const { data: vendors = [], isLoading, refetch } = useVendors(tagFilter); // Assuming useVendors accepts query params
   const createVendor = useCreateVendor();
   const updateVendor = useUpdateVendor();
   const deleteVendor = useDeleteVendor();
@@ -106,6 +107,21 @@ export default function VendorsPage() {
         width: 130,
         render: (type: string) => (
           <Tag color="blue">{type || "N/A"}</Tag>
+        ),
+      },
+      {
+        title: "Tags",
+        dataIndex: "vendor_tags",
+        key: "vendor_tags",
+        width: 150,
+        render: (tags: { tag: string }[]) => (
+          <>
+            {tags && tags.map((t) => (
+              <Tag key={t.tag} color="geekblue" style={{ marginRight: 4, marginBottom: 4 }}>
+                {t.tag}
+              </Tag>
+            ))}
+          </>
         ),
       },
       {
@@ -221,6 +237,7 @@ export default function VendorsPage() {
         licenseExpiryDate: record.licenseExpiryDate
           ? dayjs(record.licenseExpiryDate)
           : undefined,
+        tags: record.vendor_tags?.map(t => t.tag),
       });
       setDrawerOpen(true);
     },
@@ -361,6 +378,15 @@ export default function VendorsPage() {
         exportFileName="vendors"
         showSelection
         showActions
+        extraContent={
+           <div style={{ marginRight: 16, width: 200 }}>
+             <Input.Search 
+                placeholder="Filter by tag..." 
+                onSearch={(val) => setTagFilter(val || undefined)}
+                allowClear 
+              />
+           </div>
+        }
       />
 
       {/* Create/Edit Drawer */}
@@ -403,6 +429,14 @@ export default function VendorsPage() {
                 type="VENDOR_TYPE" 
                 placeholder="Select type" 
               />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={24}>
+            <Form.Item name="vendorTags" label="Tags" tooltip="Add search tags for materials (e.g., API, Bottle)">
+             <Select mode="tags" placeholder="Type and press enter to add tags" style={{ width: '100%' }} tokenSeparators={[',']} />
             </Form.Item>
           </Col>
         </Row>

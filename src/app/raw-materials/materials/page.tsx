@@ -40,6 +40,7 @@ const typeColors: Record<string, string> = {
   API: "blue",
   Excipient: "purple",
   Packaging: "orange",
+  Packing_Material: "cyan",
 };
 
 export default function MaterialMasterPage() {
@@ -62,8 +63,9 @@ export default function MaterialMasterPage() {
     const apiCount = rawMaterials.filter(m => m.type === "API").length;
     const excipientCount = rawMaterials.filter(m => m.type === "Excipient").length;
     const packagingCount = rawMaterials.filter(m => m.type === "Packaging").length;
+    const packingMaterialCount = rawMaterials.filter(m => m.type === "Packing_Material").length;
 
-    return { total, apiCount, excipientCount, packagingCount };
+    return { total, apiCount, excipientCount, packagingCount, packingMaterialCount };
   }, [rawMaterials]);
 
   // Table columns
@@ -128,7 +130,7 @@ export default function MaterialMasterPage() {
   const summaryComponent = useMemo(
     () => (
       <Row gutter={16} style={{ marginBottom: 8 }}>
-        <Col span={6}>
+        <Col span={4}>
           <Card size="small" style={{ background: "linear-gradient(135deg, #f6ffed 0%, #b7eb8f 100%)", border: "none" }}>
             <Statistic
               title={<span style={{ fontSize: 11, color: "#389e0d" }}>Total Materials</span>}
@@ -138,7 +140,7 @@ export default function MaterialMasterPage() {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={4}>
           <Card size="small" style={{ background: "linear-gradient(135deg, #e6f4ff 0%, #91caff 100%)", border: "none" }}>
             <Statistic
               title={<span style={{ fontSize: 11, color: "#0958d9" }}>API</span>}
@@ -147,7 +149,7 @@ export default function MaterialMasterPage() {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={4}>
           <Card size="small" style={{ background: "linear-gradient(135deg, #f9f0ff 0%, #d3adf7 100%)", border: "none" }}>
             <Statistic
               title={<span style={{ fontSize: 11, color: "#722ed1" }}>Excipient</span>}
@@ -156,12 +158,21 @@ export default function MaterialMasterPage() {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={4}>
           <Card size="small" style={{ background: "linear-gradient(135deg, #fff7e6 0%, #ffd591 100%)", border: "none" }}>
             <Statistic
               title={<span style={{ fontSize: 11, color: "#d46b08" }}>Packaging</span>}
               value={summaryStats.packagingCount}
               styles={{ content: { fontSize: 18, color: "#d46b08" } }}
+            />
+          </Card>
+        </Col>
+        <Col span={4}>
+          <Card size="small" style={{ background: "linear-gradient(135deg, #e6fffb 0%, #87e8de 100%)", border: "none" }}>
+            <Statistic
+              title={<span style={{ fontSize: 11, color: "#08979c" }}>Packing Mat.</span>}
+              value={summaryStats.packingMaterialCount}
+              styles={{ content: { fontSize: 18, color: "#08979c" } }}
             />
           </Card>
         </Col>
@@ -356,6 +367,7 @@ export default function MaterialMasterPage() {
                 <Option value="API">API (Active Pharmaceutical Ingredient)</Option>
                 <Option value="Excipient">Excipient</Option>
                 <Option value="Packaging">Packaging</Option>
+                <Option value="Packing_Material">Packing Material</Option>
               </Select>
             </Form.Item>
           </Col>

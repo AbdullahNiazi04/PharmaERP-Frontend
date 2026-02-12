@@ -316,16 +316,18 @@ export default function PaymentsPage() {
 
   const handleSubmit = useCallback(
     async (values: Record<string, unknown>) => {
+      console.log('Payment form values:', values);
       const data: CreatePaymentDto = {
         invoiceId: values.invoiceId as string,
         paymentDate: (values.paymentDate as dayjs.Dayjs).format("YYYY-MM-DD"),
-        paymentMethod: values.paymentMethod as 'Bank Transfer' | 'Cheque' | 'Cash' | 'Credit Card' | undefined,
+        paymentMethod: (values.paymentMethod as string)?.replace(/ /g, "_") as 'Bank_Transfer' | 'Cheque' | 'Cash' | 'Credit_Card' | undefined,
         amountPaid: values.amountPaid as number,
         taxWithheld: values.taxWithheld != null ? Number(values.taxWithheld) : undefined,
         advanceAdjustments: values.advanceAdjustments != null ? Number(values.advanceAdjustments) : undefined,
         paymentReference: values.paymentReference as string | undefined,
         status: values.status as 'Pending' | 'Completed' | 'Failed' | undefined,
       };
+      console.log('Payment submission data:', data);
 
       if (drawerMode === "create") {
         await createPayment.mutateAsync(data);

@@ -4,14 +4,14 @@ import api from './api';
 export interface Vendor {
   id: string;
   legalName: string;
-  vendorType?: 'Raw Material' | 'Packaging' | 'Services' | 'Equipment';
+  vendorType?: string;
   businessCategory?: string;
   registrationNumber?: string;
   ntnVatGst?: string;
   country?: string;
   city?: string;
   address?: string;
-  status?: 'Active' | 'Inactive' | 'Blacklisted';
+  status?: string;
   contactPerson?: string;
   contactNumber?: string;
   email?: string;
@@ -21,26 +21,96 @@ export interface Vendor {
   regulatoryLicense?: string;
   licenseExpiryDate?: string;
   qualityRating?: number;
-  auditStatus?: 'Pending' | 'Cleared' | 'Failed';
-  riskCategory?: 'Low' | 'Medium' | 'High';
+  auditStatus?: string;
+  riskCategory?: string;
   bankName?: string;
   accountTitle?: string;
   accountNumber?: string;
   currency?: string;
-  paymentTerms?: 'Net-30' | 'Net-60' | 'Advanced';
+  paymentTerms?: string;
   creditLimit?: number;
   taxWithholdingPercent?: number;
   createdAt?: string;
   updatedAt?: string;
+  vendor_tags?: { tag: string }[];
 }
 
-export type CreateVendorDto = Omit<Vendor, 'id' | 'createdAt' | 'updatedAt'>;
+export interface RmqcInspection {
+  id: string;
+  grn_id: string;
+  raw_material_id?: string;
+  inspection_date: string;
+  inspector_name: string;
+  description?: string;
+  status: string;
+  images?: string[];
+  documents?: string[];
+  created_at?: string;
+  updated_at?: string;
+  completed_at?: string;
+  goods_receipt_notes?: {
+    grn_number: string;
+    received_by: string;
+  };
+  raw_material_batches?: {
+    batch_number: string;
+    raw_material_inventory?: {
+      raw_materials?: {
+        name: string;
+        code: string;
+      };
+    };
+  };
+}
+
+export interface CreateRmqcDto {
+  grn_id: string;
+  raw_material_id?: string;
+  inspector_name: string;
+  description?: string;
+  images?: string[];
+  documents?: string[];
+}
+
+export interface UpdateRmqcDto extends Partial<CreateRmqcDto> {}
+
+export interface CreateVendorDto {
+  legalName: string;
+  vendorType?: string;
+  businessCategory?: string;
+  registrationNumber?: string;
+  ntnVatGst?: string;
+  country?: string;
+  city?: string;
+  address?: string;
+  status?: string;
+  contactPerson?: string;
+  contactNumber?: string;
+  email?: string;
+  website?: string;
+  isGmpCertified?: boolean;
+  isBlacklisted?: boolean;
+  regulatoryLicense?: string;
+  licenseExpiryDate?: string;
+  qualityRating?: number;
+  auditStatus?: string;
+  riskCategory?: string;
+  bankName?: string;
+  accountTitle?: string;
+  accountNumber?: string;
+  currency?: string;
+  paymentTerms?: string;
+  creditLimit?: number;
+  taxWithholdingPercent?: number;
+  taxWithholdingPercent?: number;
+  vendorTags?: string[];
+}
 export type UpdateVendorDto = Partial<CreateVendorDto>;
 
 // Vendors API
 export const vendorsApi = {
-  getAll: async (): Promise<Vendor[]> => {
-    const response = await api.get('/vendors');
+  getAll: async (query?: string): Promise<Vendor[]> => {
+    const response = await api.get(`/vendors${query || ""}`);
     return response.data;
   },
   
@@ -166,6 +236,12 @@ export const purchaseRequisitionsApi = {
     const response = await api.get(`/purchase-requisitions/${id}`);
     return response.data;
   },
+
+  // Get PRs available for PO creation (Approved & not linked to any PO)
+  getAvailableForPO: async (): Promise<PurchaseRequisition[]> => {
+    const response = await api.get('/purchase-requisitions/available');
+    return response.data;
+  },
   
   create: async (data: CreatePurchaseRequisitionDto): Promise<PurchaseRequisition> => {
     const response = await api.post('/purchase-requisitions', data);
@@ -187,10 +263,12 @@ export interface PurchaseOrderItem {
   id?: string;
   itemCode?: string;
   description?: string;
+  category?: string;
   quantity: number;
   unitPrice: number;
   discountPercent?: number;
   taxPercent?: number;
+  totalAmount?: number;
   isBatchRequired?: boolean;
 }
 
@@ -243,6 +321,18 @@ export const purchaseOrdersApi = {
     const response = await api.get(`/purchase-orders/${id}`);
     return response.data;
   },
+
+  // Get POs available for GRN creation (Issued or Partial status)
+  getAvailableForGRN: async (): Promise<PurchaseOrder[]> => {
+    const response = await api.get('/purchase-orders/available');
+    return response.data;
+  },
+
+  // Get completed/closed POs (historical view)
+  getCompleted: async (): Promise<PurchaseOrder[]> => {
+    const response = await api.get('/purchase-orders/completed');
+    return response.data;
+  },
   
   create: async (data: CreatePurchaseOrderDto): Promise<PurchaseOrder> => {
     const response = await api.post('/purchase-orders', data);
@@ -280,7 +370,7 @@ export interface GoodsReceiptNote {
   grnDate: string;
   poId: string;
   warehouseLocation?: string;
-  receivedBy?: string;
+  receivedBy: string;
   qcRequired?: boolean;
   qcStatus?: 'Pending' | 'Passed' | 'Failed' | 'Skipped';
   qcRemarks?: string;
@@ -297,7 +387,7 @@ export interface CreateGoodsReceiptNoteDto {
   grnDate: string;
   poId: string;
   warehouseLocation?: string;
-  receivedBy?: string;
+  receivedBy: string;
   qcRequired?: boolean;
   qcStatus?: 'Pending' | 'Passed' | 'Failed' | 'Skipped';
   qcRemarks?: string;
@@ -305,6 +395,51 @@ export interface CreateGoodsReceiptNoteDto {
   inventoryLocation?: string;
   items: GoodsReceiptItem[];
 }
+
+// Import Order Types
+export interface ImportOrder {
+  id: string;
+  importNumber: string;
+  vendorId: string;
+  referencePoId?: string;
+  currency: string;
+  exchangeRate: number;
+  amountUsd: number;
+  amountPkr: number;
+  billOfLading?: string;
+  lcNumber?: string;
+  customsRef?: string;
+  portOfEntry?: string;
+  status: 'Pending' | 'In Transit' | 'At Port' | 'Customs Clearance' | 'Cleared' | 'Received';
+  eta?: string;
+  arrivalDate?: string;
+  clearanceDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  vendors?: Vendor;
+  purchase_orders?: PurchaseOrder;
+  // import_documents?: any[]; // We can define ImportDocument type if needed
+}
+
+export interface CreateImportOrderDto {
+  importNumber: string;
+  vendorId: string;
+  referencePoId?: string;
+  currency?: string;
+  exchangeRate: number;
+  amountUsd: number;
+  billOfLading?: string;
+  lcNumber?: string;
+  customsRef?: string;
+  portOfEntry?: string;
+  status?: string;
+  eta?: string;
+  arrivalDate?: string;
+  arrivalDate?: string;
+  clearanceDate?: string;
+}
+
+export type UpdateImportOrderDto = Partial<CreateImportOrderDto>;
 
 // Goods Receipt Notes API
 export const goodsReceiptNotesApi = {
@@ -331,6 +466,38 @@ export const goodsReceiptNotesApi = {
   delete: async (id: string): Promise<void> => {
     await api.delete(`/goods-receipt-notes/${id}`);
   },
+
+  updateStatus: async (id: string, data: { status?: string; qcStatus?: string }): Promise<GoodsReceiptNote> => {
+    const response = await api.patch(`/goods-receipt-notes/${id}/status`, data);
+    return response.data;
+  },
+};
+
+// Imports API
+export const importsApi = {
+  getAll: async (): Promise<ImportOrder[]> => {
+    const response = await api.get('/imports');
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<ImportOrder> => {
+    const response = await api.get(`/imports/${id}`);
+    return response.data;
+  },
+
+  create: async (data: CreateImportOrderDto): Promise<ImportOrder> => {
+    const response = await api.post('/imports', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: UpdateImportOrderDto): Promise<ImportOrder> => {
+    const response = await api.patch(`/imports/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/imports/${id}`);
+  },
 };
 
 // Raw Material Master Types (matches backend)
@@ -339,11 +506,13 @@ export interface RawMaterial {
   name: string;
   code: string;
   description?: string;
-  type?: 'API' | 'Excipient' | 'Packaging';
+  type?: RawMaterialType;
   unitOfMeasure: string;
   createdAt?: string;
   updatedAt?: string;
 }
+
+export type RawMaterialType = 'API' | 'Excipient' | 'Packaging' | 'Packing_Material';
 
 export type CreateRawMaterialDto = Omit<RawMaterial, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -553,6 +722,11 @@ export interface Invoice {
   status?: 'Pending' | 'Paid' | 'Overdue' | 'Cancelled';
   createdAt?: string;
   updatedAt?: string;
+  currency?: string;
+  // Nested relations (populated by findOne)
+  vendors?: Vendor;
+  purchase_orders?: PurchaseOrder;
+  goods_receipt_notes?: GoodsReceiptNote;
 }
 
 export interface CreateInvoiceDto {
@@ -564,6 +738,7 @@ export interface CreateInvoiceDto {
   amount: number;
   dueDate: string;
   status?: 'Pending' | 'Paid' | 'Overdue' | 'Cancelled';
+  currency?: string;
 }
 
 // Invoices API
@@ -707,16 +882,43 @@ export interface CreateProcurementOptionDto {
 
 export const procurementOptionsApi = {
   getAll: async (type?: string): Promise<ProcurementOption[]> => {
-    const response = await api.get('/procurement-options', { params: { type } });
+    const response = await api.get(`/procurement-options${type ? `?type=${type}` : ''}`);
     return response.data;
   },
 
-  create: async (data: CreateProcurementOptionDto): Promise<ProcurementOption> => {
+  create: async (data: any): Promise<ProcurementOption> => {
     const response = await api.post('/procurement-options', data);
     return response.data;
   },
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/procurement-options/${id}`);
+  },
+};
+
+export const rmqcApi = {
+  getAll: async (): Promise<RmqcInspection[]> => {
+    const response = await api.get('/rmqc');
+    return response.data;
+  },
+  getById: async (id: string): Promise<RmqcInspection> => {
+    const response = await api.get(`/rmqc/${id}`);
+    return response.data;
+  },
+  create: async (data: CreateRmqcDto): Promise<RmqcInspection> => {
+    const response = await api.post('/rmqc', data);
+    return response.data;
+  },
+  update: async (id: string, data: UpdateRmqcDto): Promise<RmqcInspection> => {
+    const response = await api.patch(`/rmqc/${id}`, data);
+    return response.data;
+  },
+  pass: async (id: string): Promise<RmqcInspection> => {
+    const response = await api.post(`/rmqc/${id}/pass`);
+    return response.data;
+  },
+  fail: async (id: string): Promise<RmqcInspection> => {
+    const response = await api.post(`/rmqc/${id}/fail`);
+    return response.data;
   },
 };

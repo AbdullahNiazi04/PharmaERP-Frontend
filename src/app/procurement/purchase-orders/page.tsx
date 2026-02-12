@@ -35,9 +35,9 @@ import {
   useUpdatePurchaseOrder,
   useDeletePurchaseOrder,
   useVendors,
-  usePurchaseRequisitions,
+  usePurchaseRequisitionsAvailable,
 } from "@/hooks/useProcurement";
-import { PurchaseOrder, CreatePurchaseOrderDto, PurchaseOrderItem, purchaseRequisitionsApi } from "@/lib/services";
+import { PurchaseOrder, CreatePurchaseOrderDto, PurchaseOrderItem, purchaseRequisitionsApi, purchaseOrdersApi } from "@/lib/services";
 import type { ColumnsType } from "antd/es/table";
 
 const { Option } = Select;
@@ -62,10 +62,17 @@ export default function PurchaseOrdersPage() {
   const [documentViewerOpen, setDocumentViewerOpen] = useState(false);
   const [items, setItems] = useState<(PurchaseOrderItem & { key: string })[]>([]);
 
+  // Memoized draft loader to prevent FormDrawer useEffect re-runs
+  const handleDraftLoaded = useCallback((data: Record<string, unknown>) => ({
+    ...data,
+    poDate: data.poDate && typeof data.poDate === 'string' ? dayjs(data.poDate as string) : data.poDate,
+    deliverySchedule: data.deliverySchedule && typeof data.deliverySchedule === 'string' ? dayjs(data.deliverySchedule as string) : data.deliverySchedule,
+  }), []);
+
   // API Hooks
   const { data: purchaseOrders = [], isLoading, refetch } = usePurchaseOrders();
   const { data: vendors = [] } = useVendors();
-  const { data: requisitions = [] } = usePurchaseRequisitions();
+  const { data: availableRequisitions = [] } = usePurchaseRequisitionsAvailable();
   const createPO = useCreatePurchaseOrder();
   const updatePO = useUpdatePurchaseOrder();
   const deletePO = useDeletePurchaseOrder();
@@ -300,10 +307,16 @@ export default function PurchaseOrdersPage() {
     []
   );
 
-  const handleView = useCallback((record: PurchaseOrder) => {
-    setCurrentPO(record);
-    setDocumentViewerOpen(true);
-  }, []);
+  const handleView = useCallback(async (record: PurchaseOrder) => {
+    try {
+      const fullPO = await purchaseOrdersApi.getById(record.id);
+      setCurrentPO(fullPO);
+      setDocumentViewerOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch PO details", error);
+      modal.error({ title: "Error", content: "Failed to load PO items" });
+    }
+  }, [modal]);
 
   const handleDelete = useCallback(
     (record: PurchaseOrder) => {
@@ -354,7 +367,7 @@ export default function PurchaseOrdersPage() {
         poNumber: values.poNumber as string,
         poDate: (values.poDate as dayjs.Dayjs).format("YYYY-MM-DD"),
         vendorId: values.vendorId as string,
-        referencePrId: values.referencePrId as string | undefined,
+        referencePrId: (values.referencePrId as string) || undefined,
         currency: values.currency as string | undefined,
         paymentTerms: values.paymentTerms as string | undefined,
         incoterms: values.incoterms as string | undefined,
@@ -364,7 +377,9 @@ export default function PurchaseOrdersPage() {
         deliveryLocation: values.deliveryLocation as string | undefined,
         freightCharges: values.freightCharges as number | undefined,
         insuranceCharges: values.insuranceCharges as number | undefined,
-        items: items.filter(item => item.quantity > 0),
+        items: items
+          .filter(item => item.quantity > 0)
+          .map(({ key, id, ...rest }) => rest), // Strip React key and id before sending
       };
 
       if (drawerMode === "create") {
@@ -386,7 +401,7 @@ export default function PurchaseOrdersPage() {
 
     const vendor = vendors.find((v) => v.id === currentPO.vendorId);
 
-    return [
+    const sections: any[] = [
       {
         title: "Purchase Order Details",
         items: [
@@ -415,6 +430,28 @@ export default function PurchaseOrdersPage() {
         ],
       },
     ];
+
+    if (currentPO.items && currentPO.items.length > 0) {
+      sections.push({
+        title: "Ordered Items",
+        table: {
+          columns: [
+            { title: "Code", dataIndex: "itemCode", render: (val: unknown) => String(val || "-") },
+            { title: "Description", dataIndex: "description", render: (val: unknown) => String(val || "-") },
+            { title: "Qty", dataIndex: "quantity", render: (val: unknown) => String(val ?? 0) },
+            { title: "Unit Price", dataIndex: "unitPrice", render: (val: unknown) => val ? `₨ ${Number(val).toLocaleString()}` : "-" },
+            { title: "Total", dataIndex: "totalAmount", render: (val: unknown) => val ? `₨ ${Number(val).toLocaleString()}` : "-" },
+           ],
+          data: currentPO.items.map((item, index) => ({ 
+             ...item, 
+             key: item.id || index,
+             totalAmount: (item.totalAmount || ((item.quantity||0) * (item.unitPrice||0))),
+          })),
+        },
+      });
+    }
+
+    return sections;
   }, [currentPO, vendors]);
 
   // Items table columns
@@ -443,6 +480,22 @@ export default function PurchaseOrdersPage() {
           onChange={(e) => updateItem(index, "description", e.target.value)}
           placeholder="Item description"
           size="small"
+        />
+      ),
+    },
+    {
+      title: "Category",
+      dataIndex: "category",
+      key: "category",
+      width: 120,
+      render: (_: string, __: PurchaseOrderItem, index: number) => (
+        <DynamicSelect
+          type="pr_category"
+          value={items[index]?.category}
+          onChange={(val) => updateItem(index, "category", val)}
+          placeholder="Select"
+          style={{ width: "100%" }}
+          allowClear
         />
       ),
     },
@@ -570,11 +623,7 @@ export default function PurchaseOrdersPage() {
         form={form}
         initialValues={formInitialValues}
         entityId={currentPO?.id}
-        onDraftLoaded={(data) => ({
-          ...data,
-          poDate: data.poDate && typeof data.poDate === 'string' ? dayjs(data.poDate) : data.poDate,
-          deliverySchedule: data.deliverySchedule && typeof data.deliverySchedule === 'string' ? dayjs(data.deliverySchedule) : data.deliverySchedule,
-        })}
+        onDraftLoaded={handleDraftLoaded}
       >
         <Divider styles={{ content: { margin: 0 } }} style={{ fontSize: 13 }}>
           <ShoppingCartOutlined /> Order Details
@@ -634,8 +683,8 @@ export default function PurchaseOrdersPage() {
                 allowClear
                 showSearch
                 optionFilterProp="label"
-                options={requisitions.map((r) => ({
-                    label: `${r.reqNumber} (${r.status})`,
+                options={availableRequisitions.map((r) => ({
+                    label: `${r.reqNumber} - ${r.requestedBy}`,
                     value: r.id,
                   }))}
                 onChange={async (value) => {
@@ -647,18 +696,27 @@ export default function PurchaseOrdersPage() {
                         key: `pr-item-${index}-${Date.now()}`,
                         itemCode: item.itemCode || '',
                         description: item.itemName,
+                        category: item.category || '',
                         quantity: item.quantity,
                         unitPrice: Number(item.estimatedUnitCost) || 0,
                         discountPercent: 0,
                         taxPercent: 0,
                         isBatchRequired: false,
                       }));
-                      setItems(mappedItems);
-                      
-                      // Also auto-fill other fields if empty
-                      if (prDetails.department && !form.getFieldValue('department')) {
-                         // Add logic if PO had department field, currently it doesn't, but we can infer others?
+                      // Set form fields BEFORE setItems to avoid re-render race condition
+                      const fieldsToUpdate: Record<string, any> = {};
+                      if (prDetails.expectedDeliveryDate) {
+                        fieldsToUpdate.deliverySchedule = dayjs(prDetails.expectedDeliveryDate);
                       }
+                      const preferredVendorId = prDetails.items?.find((item: any) => item.preferredVendorId)?.preferredVendorId;
+                      if (preferredVendorId && !form.getFieldValue('vendorId')) {
+                        fieldsToUpdate.vendorId = preferredVendorId;
+                      }
+                      if (Object.keys(fieldsToUpdate).length > 0) {
+                        form.setFieldsValue(fieldsToUpdate);
+                      }
+
+                      setItems(mappedItems);
                     }
                   } catch (error) {
                     console.error("Failed to fetch PR details", error);

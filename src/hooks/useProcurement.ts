@@ -14,12 +14,22 @@ import {
   Invoice,
   Payment,
   CreateVendorDto,
+  UpdateVendorDto,
   CreatePurchaseRequisitionDto,
   CreatePurchaseOrderDto,
   CreateGoodsReceiptNoteDto,
   CreateInvoiceDto,
   CreatePaymentDto,
   procurementOptionsApi,
+  CreateProcurementOptionDto,
+  rmqcApi,
+  CreateRmqcDto,
+  UpdateRmqcDto,
+  importsApi,
+  ImportOrder,
+  CreateImportOrderDto,
+  UpdateImportOrderDto,
+
 } from '@/lib/services';
 import { soundManager } from '@/lib/sounds';
 
@@ -49,17 +59,28 @@ export const procurementKeys = {
     all: ['payments'] as const,
     detail: (id: string) => ['payments', id] as const,
   },
+  imports: {
+    all: ['imports'] as const,
+    detail: (id: string) => ['imports', id] as const,
+  },
+
 };
+
+// ============ COMPLETED PROCUREMENTS HOOKS ============
+
 
 // ============ VENDORS HOOKS ============
 
-export function useVendors() {
+export const useVendors = (tags?: string) => {
   return useQuery({
-    queryKey: procurementKeys.vendors.all,
-    queryFn: vendorsApi.getAll,
+    queryKey: ["vendors", tags],
+    queryFn: async () => {
+        const query = tags ? `?tags=${tags}` : "";
+        return vendorsApi.getAll(query);
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
-}
+};
 
 export function useVendor(id: string) {
   return useQuery({
@@ -97,12 +118,14 @@ export function useCreateVendor() {
 
       return { previousVendors };
     },
-    onError: (err, _, context) => {
+    onError: (err: any, _, context) => {
       // Rollback on error
       if (context?.previousVendors) {
         queryClient.setQueryData(procurementKeys.vendors.all, context.previousVendors);
       }
-      message.error('Failed to create vendor');
+      console.error(err);
+      const msg = err.response?.data?.message || err.message || 'Failed to create vendor';
+      message.error(`Failed to create vendor: ${Array.isArray(msg) ? msg.join(', ') : msg}`);
       soundManager.playError();
     },
     onSuccess: () => {
@@ -210,6 +233,15 @@ export function usePurchaseRequisition(id: string) {
   });
 }
 
+// PRs available for PO creation (Approved & not linked to any PO)
+export function usePurchaseRequisitionsAvailable() {
+  return useQuery({
+    queryKey: ['purchase-requisitions', 'available'] as const,
+    queryFn: purchaseRequisitionsApi.getAvailableForPO,
+    staleTime: 2 * 60 * 1000, // 2 minutes - refresh more often for dropdowns
+  });
+}
+
 export function useCreatePurchaseRequisition() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
@@ -221,8 +253,10 @@ export function useCreatePurchaseRequisition() {
       soundManager.playSuccess();
       queryClient.invalidateQueries({ queryKey: procurementKeys.requisitions.all });
     },
-    onError: () => {
-      message.error('Failed to create purchase requisition');
+    onError: (err: any) => {
+      console.error('Create PR Error:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed to create purchase requisition';
+      message.error(`Failed to create purchase requisition: ${Array.isArray(msg) ? msg.join(', ') : msg}`);
       soundManager.playError();
     },
   });
@@ -283,6 +317,24 @@ export function usePurchaseOrder(id: string) {
   });
 }
 
+// POs available for GRN creation (Issued or Partial status)
+export function useAvailablePurchaseOrdersForGRN() {
+  return useQuery({
+    queryKey: ['purchase-orders', 'available'] as const,
+    queryFn: purchaseOrdersApi.getAvailableForGRN,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+// Completed/closed POs (historical view)
+export function useCompletedPurchaseOrders() {
+  return useQuery({
+    queryKey: ['purchase-orders', 'completed'] as const,
+    queryFn: purchaseOrdersApi.getCompleted,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useCreatePurchaseOrder() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
@@ -294,8 +346,10 @@ export function useCreatePurchaseOrder() {
       soundManager.playSuccess();
       queryClient.invalidateQueries({ queryKey: procurementKeys.purchaseOrders.all });
     },
-    onError: () => {
-      message.error('Failed to create purchase order');
+    onError: (err: any) => {
+      console.error('Create PO Error:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed to create purchase order';
+      message.error(`Failed to create purchase order: ${Array.isArray(msg) ? msg.join(', ') : msg}`);
       soundManager.playError();
     },
   });
@@ -367,8 +421,10 @@ export function useCreateGoodsReceiptNote() {
       soundManager.playSuccess();
       queryClient.invalidateQueries({ queryKey: procurementKeys.grns.all });
     },
-    onError: () => {
-      message.error('Failed to create goods receipt note');
+    onError: (err: any) => {
+      console.error('Create GRN Error:', err);
+      const msg = err.response?.data?.message || err.message || 'Failed to create goods receipt note';
+      message.error(`Failed to create GRN: ${Array.isArray(msg) ? msg.join(', ') : msg}`);
       soundManager.playError();
     },
   });
@@ -406,6 +462,26 @@ export function useDeleteGoodsReceiptNote() {
     },
     onError: () => {
       message.error('Failed to delete goods receipt note');
+      soundManager.playError();
+    },
+  });
+}
+
+export function useUpdateGRNStatus() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { status?: string; qcStatus?: string } }) =>
+      goodsReceiptNotesApi.updateStatus(id, data),
+    onSuccess: () => {
+      message.success('GRN status updated successfully');
+      soundManager.playSuccess();
+      queryClient.invalidateQueries({ queryKey: procurementKeys.grns.all });
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || err.message || 'Failed to update GRN status';
+      message.error(`Failed to update status: ${Array.isArray(msg) ? msg.join(', ') : msg}`);
       soundManager.playError();
     },
   });
@@ -457,7 +533,7 @@ export function useCreateInvoice() {
       if (context?.previousInvoices) {
         queryClient.setQueryData(procurementKeys.invoices.all, context.previousInvoices);
       }
-      message.error('Failed to create invoice');
+      message.error(`Failed to create invoice: ${Array.isArray((err as any).response?.data?.message) ? (err as any).response.data.message.join(', ') : (err as any).response?.data?.message || (err as any).message || 'Unknown error'}`);
       soundManager.playError();
     },
     onSuccess: () => {
@@ -714,8 +790,10 @@ export function useCreateProcurementOption() {
       queryClient.invalidateQueries({ queryKey: procurementOptionsKeys.all });
       queryClient.invalidateQueries({ queryKey: procurementOptionsKeys.byType(variables.type) });
     },
-    onError: () => {
-      message.error('Failed to create option');
+    onError: (err: any) => {
+      console.error(err);
+      const msg = err.response?.data?.message || err.message || 'Failed to create option';
+      message.error(`Failed to create option: ${Array.isArray(msg) ? msg.join(', ') : msg}`);
       soundManager.playError();
     },
   });
@@ -748,7 +826,7 @@ export function usePrefetchProcurementData() {
     prefetchVendors: () => {
       queryClient.prefetchQuery({
         queryKey: procurementKeys.vendors.all,
-        queryFn: vendorsApi.getAll,
+        queryFn: () => vendorsApi.getAll(),
         staleTime: 5 * 60 * 1000,
       });
     },
@@ -790,7 +868,7 @@ export function usePrefetchProcurementData() {
     prefetchAll: () => {
       queryClient.prefetchQuery({
         queryKey: procurementKeys.vendors.all,
-        queryFn: vendorsApi.getAll,
+        queryFn: () => vendorsApi.getAll(),
       });
       queryClient.prefetchQuery({
         queryKey: procurementKeys.requisitions.all,
@@ -816,3 +894,172 @@ export function usePrefetchProcurementData() {
   };
 }
 
+
+// ============ IMPORTS HOOKS ============
+
+export function useImportOrders() {
+  return useQuery({
+    queryKey: procurementKeys.imports.all,
+    queryFn: importsApi.getAll,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useImportOrder(id: string) {
+  return useQuery({
+    queryKey: procurementKeys.imports.detail(id),
+    queryFn: () => importsApi.getById(id),
+    enabled: !!id,
+  });
+}
+
+export function useCreateImportOrder() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateImportOrderDto) => importsApi.create(data),
+    onSuccess: (newItem) => {
+      message.success(`Import Order ${newItem.importNumber} created successfully`);
+      queryClient.invalidateQueries({ queryKey: procurementKeys.imports.all });
+    },
+    onError: (err) => {
+      message.error('Failed to create import order');
+      console.error(err);
+    },
+  });
+}
+
+export function useUpdateImportOrder() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateImportOrderDto }) => 
+      importsApi.update(id, data),
+    onSuccess: (updatedItem) => {
+      message.success(`Import Order ${updatedItem.importNumber} updated successfully`);
+      queryClient.invalidateQueries({ queryKey: procurementKeys.imports.all });
+      queryClient.invalidateQueries({ queryKey: procurementKeys.imports.detail(updatedItem.id) });
+    },
+    onError: (err) => {
+      message.error('Failed to update import order');
+      console.error(err);
+    },
+  });
+}
+
+export function useDeleteImportOrder() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => importsApi.delete(id),
+    onSuccess: () => {
+      message.success('Import order deleted successfully');
+      queryClient.invalidateQueries({ queryKey: procurementKeys.imports.all });
+    },
+    onError: (err) => {
+      message.error('Failed to delete import order');
+      console.error(err);
+    },
+  });
+}
+
+// ============ RMQC HOOKS ============
+
+export const rmqcKeys = {
+  all: ['rmqc'] as const,
+  detail: (id: string) => ['rmqc', id] as const,
+};
+
+export function useRmqcInspections() {
+  return useQuery({
+    queryKey: rmqcKeys.all,
+    queryFn: rmqcApi.getAll,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useRmqcInspection(id: string) {
+  return useQuery({
+    queryKey: rmqcKeys.detail(id),
+    queryFn: () => rmqcApi.getById(id),
+    enabled: !!id,
+  });
+}
+
+export function useCreateRmqc() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateRmqcDto) => rmqcApi.create(data),
+    onSuccess: () => {
+      message.success('Inspection created successfully');
+      soundManager.playSuccess();
+      queryClient.invalidateQueries({ queryKey: rmqcKeys.all });
+    },
+    onError: (err: any) => {
+      console.error(err);
+      const msg = err.response?.data?.message || err.message || 'Failed to create vendor';
+      message.error(`Failed to create vendor: ${Array.isArray(msg) ? msg.join(', ') : msg}`);
+      soundManager.playError();
+    },
+  });
+}
+
+export function useUpdateRmqc() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateRmqcDto }) =>
+      rmqcApi.update(id, data),
+    onSuccess: () => {
+      message.success('Inspection updated successfully');
+      soundManager.playSuccess();
+      queryClient.invalidateQueries({ queryKey: rmqcKeys.all });
+    },
+    onError: () => {
+      message.error('Failed to update inspection');
+      soundManager.playError();
+    },
+  });
+}
+
+export function usePassRmqc() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => rmqcApi.pass(id),
+    onSuccess: () => {
+      message.success('Inspection passed');
+      soundManager.playSuccess();
+      queryClient.invalidateQueries({ queryKey: rmqcKeys.all });
+    },
+    onError: () => {
+      message.error('Failed to pass inspection');
+      soundManager.playError();
+    },
+  });
+}
+
+export function useFailRmqc() {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => rmqcApi.fail(id),
+    onSuccess: () => {
+      message.success('Inspection marked as failed');
+      soundManager.playSuccess();
+      queryClient.invalidateQueries({ queryKey: rmqcKeys.all });
+    },
+    onError: () => {
+      message.error('Failed to mark inspection as failure');
+      soundManager.playError();
+    },
+  });
+}

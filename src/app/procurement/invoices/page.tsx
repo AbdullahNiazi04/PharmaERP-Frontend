@@ -27,7 +27,7 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { EnterpriseDataTable, FormDrawer, DocumentViewer } from "@/components/common";
+import { EnterpriseDataTable, FormDrawer, DocumentViewer, DynamicSelect } from "@/components/common";
 import {
   useInvoices,
   useCreateInvoice,
@@ -37,7 +37,7 @@ import {
   usePurchaseOrders,
   useGoodsReceiptNotes,
 } from "@/hooks/useProcurement";
-import { Invoice, CreateInvoiceDto } from "@/lib/services";
+import { Invoice, CreateInvoiceDto, invoicesApi } from "@/lib/services";
 import type { ColumnsType } from "antd/es/table";
 
 const { Option } = Select;
@@ -284,9 +284,15 @@ export default function InvoicesPage() {
     [form]
   );
 
-  const handleView = useCallback((record: Invoice) => {
-    setCurrentInvoice(record);
-    setDocumentViewerOpen(true);
+  const handleView = useCallback(async (record: Invoice) => {
+    try {
+      const fullInvoice = await invoicesApi.getById(record.id);
+      setCurrentInvoice(fullInvoice);
+      setDocumentViewerOpen(true);
+    } catch (error) {
+       console.error("Failed to fetch Invoice details", error);
+       Modal.error({ title: "Error", content: "Failed to load Invoice details" });
+    }
   }, []);
 
   const handleDelete = useCallback(
@@ -331,9 +337,10 @@ export default function InvoicesPage() {
         vendorId: values.vendorId as string,
         poId: values.poId as string | undefined,
         grnId: values.grnId as string | undefined,
-        amount: values.amount as number,
+        amount: Number(values.amount),
         dueDate: (values.dueDate as dayjs.Dayjs).format("YYYY-MM-DD"),
         status: values.status as 'Pending' | 'Paid' | 'Overdue' | 'Cancelled' | undefined,
+        currency: values.currency as string,
       };
 
       if (drawerMode === "create") {
@@ -348,40 +355,40 @@ export default function InvoicesPage() {
     [createInvoice, updateInvoice, drawerMode, currentInvoice, form]
   );
 
-  // Document viewer sections
+  // Document viewer sections - now using nested relations from API
   const documentSections = useMemo(() => {
     if (!currentInvoice) return [];
 
-    const vendor = vendors.find((v) => v.id === currentInvoice.vendorId);
-    const po = purchaseOrders.find((p) => p.id === currentInvoice.poId);
-    const grn = grns.find((g) => g.id === currentInvoice.grnId);
+    // Use nested relations if available, fallback to local lookup
+    const vendor = currentInvoice.vendors || vendors.find((v) => v.id === currentInvoice.vendorId);
+    const po = currentInvoice.purchase_orders || purchaseOrders.find((p) => p.id === currentInvoice.poId);
+    const grn = currentInvoice.goods_receipt_notes || grns.find((g) => g.id === currentInvoice.grnId);
 
-    return [
+    const sections: any[] = [
       {
         title: "Invoice Details",
         items: [
-          { label: "Invoice Number", value: <Text strong style={{ fontSize: 16 }}>{currentInvoice.invoiceNumber}</Text> },
-          { label: "Status", value: <Tag color={statusColors[currentInvoice.status || ""] || "default"} style={{ fontSize: 13 }}>{currentInvoice.status}</Tag> },
-          { label: "Invoice Date", value: currentInvoice.invoiceDate ? dayjs(currentInvoice.invoiceDate).format("MMMM DD, YYYY") : null },
-          { label: "Due Date", value: currentInvoice.dueDate ? dayjs(currentInvoice.dueDate).format("MMMM DD, YYYY") : null },
+           { label: "Invoice Number", value: <Text strong style={{ fontSize: 16 }}>{currentInvoice.invoiceNumber}</Text> },
+           { label: "Status", value: <Tag color={statusColors[currentInvoice.status || ""] || "default"}>{currentInvoice.status}</Tag> },
+           { label: "Invoice Date", value: currentInvoice.invoiceDate ? dayjs(currentInvoice.invoiceDate).format("MMMM DD, YYYY") : null },
+           { label: "Due Date", value: currentInvoice.dueDate ? dayjs(currentInvoice.dueDate).format("MMMM DD, YYYY") : null },
+           { label: "Currency", value: currentInvoice.currency || "PKR" },
         ],
       },
       {
         title: "Vendor Information",
         items: [
-          { label: "Vendor Name", value: <Text strong>{vendor?.legalName}</Text> },
-          { label: "Contact Person", value: vendor?.contactPerson },
-          { label: "Contact Number", value: vendor?.contactNumber },
-          { label: "Email", value: vendor?.email },
-          { label: "Address", value: vendor?.address, span: 2 },
+           { label: "Vendor Name", value: <Text strong>{vendor?.legalName}</Text> },
+           { label: "Tax ID", value: (vendor as any)?.taxId || "N/A" },
+           { label: "Address", value: vendor?.address, span: 2 },
         ],
       },
       {
-        title: "Reference Documents",
-        items: [
-          { label: "Purchase Order", value: po?.poNumber },
-          { label: "GRN Reference", value: grn?.grnNumber },
-        ],
+         title: "Reference Documents",
+         items: [
+           { label: "Purchase Order", value: po?.poNumber || "N/A" },
+           { label: "Goods Receipt", value: grn?.grnNumber || "N/A" },
+         ],
       },
       {
         title: "Financial Summary",
@@ -389,14 +396,35 @@ export default function InvoicesPage() {
           { label: "Invoice Amount", value: currentInvoice.amount != null ? <Text strong style={{ color: "#52c41a", fontSize: 20 }}>${currentInvoice.amount.toLocaleString()}</Text> : null },
         ],
       },
-      {
-        title: "Audit Trail",
-        items: [
-          { label: "Created At", value: currentInvoice.createdAt ? dayjs(currentInvoice.createdAt).format("MMMM DD, YYYY HH:mm") : null },
-          { label: "Last Updated", value: currentInvoice.updatedAt ? dayjs(currentInvoice.updatedAt).format("MMMM DD, YYYY HH:mm") : null },
-        ],
-      },
     ];
+
+    // Add GRN Items section if GRN has items
+    if (grn?.items && grn.items.length > 0) {
+      sections.push({
+        title: "Items Received (from GRN)",
+        table: {
+          columns: [
+            { title: "Item Code", dataIndex: "itemCode", render: (val: unknown) => String(val || "-") },
+            { title: "Item Name", dataIndex: "itemName", render: (val: unknown) => String(val || "-") },
+            { title: "Ordered Qty", dataIndex: "orderedQty", render: (val: unknown) => String(val ?? 0) },
+            { title: "Received Qty", dataIndex: "receivedQty", render: (val: unknown) => <Text strong style={{ color: "#52c41a" }}>{String(val ?? 0)}</Text> },
+            { title: "Batch #", dataIndex: "batchNumber", render: (val: unknown) => String(val || "-") },
+          ],
+          data: grn.items.map((item, index) => ({ ...item, key: item.id || index })),
+        },
+      } as any);
+    }
+
+    // Add Audit Trail section
+    sections.push({
+      title: "Audit Trail",
+      items: [
+        { label: "Created At", value: currentInvoice.createdAt ? dayjs(currentInvoice.createdAt).format("MMMM DD, YYYY HH:mm") : null },
+        { label: "Last Updated", value: currentInvoice.updatedAt ? dayjs(currentInvoice.updatedAt).format("MMMM DD, YYYY HH:mm") : null },
+      ],
+    });
+
+    return sections;
   }, [currentInvoice, vendors, purchaseOrders, grns]);
 
   // Prepare form initial values with proper date objects
@@ -462,7 +490,7 @@ export default function InvoicesPage() {
         entityId={currentInvoice?.id}
         onDraftLoaded={onDraftLoaded}
       >
-        <Divider titlePlacement="left" style={{ fontSize: 13 }}>
+        <Divider styles={{ content: { margin: 0 } }} style={{ fontSize: 13 }}>
           <FileTextOutlined /> Invoice Details
         </Divider>
 
@@ -517,41 +545,51 @@ export default function InvoicesPage() {
 
         <Row gutter={16}>
           <Col span={24}>
-            <Form.Item
-              name="vendorId"
-              label="Vendor"
-              rules={[{ required: true, message: "Please select a vendor" }]}
-            >
-              <Select
-                placeholder="Select vendor"
-                showSearch
-                optionFilterProp="label"
-                options={vendors.map((v) => ({
-                  label: v.legalName,
-                  value: v.id,
-                }))}
-              />
+            <Form.Item shouldUpdate={(prev, curr) => prev.grnId !== curr.grnId} noStyle>
+               {({ getFieldValue }) => (
+                  <Form.Item
+                    name="vendorId"
+                    label="Vendor"
+                    rules={[{ required: true, message: "Please select a vendor" }]}
+                  >
+                    <Select
+                      placeholder="Select vendor"
+                      showSearch
+                      optionFilterProp="label"
+                      disabled={!!getFieldValue('grnId')}
+                      options={vendors.map((v) => ({
+                        label: v.legalName,
+                        value: v.id,
+                      }))}
+                    />
+                  </Form.Item>
+               )}
             </Form.Item>
           </Col>
         </Row>
 
         <Row gutter={16}>
           <Col span={12}>
-            <Form.Item
-              name="poId"
-              label="Purchase Order"
-              tooltip="Optional - Link to a purchase order"
-            >
-              <Select
-                placeholder="Select PO (optional)"
-                allowClear
-                showSearch
-                optionFilterProp="label"
-                options={purchaseOrders.map((p) => ({
-                  label: p.poNumber,
-                  value: p.id,
-                }))}
-              />
+            <Form.Item shouldUpdate={(prev, curr) => prev.grnId !== curr.grnId} noStyle>
+              {({ getFieldValue }) => (
+                <Form.Item
+                  name="poId"
+                  label="Purchase Order"
+                  tooltip="Optional - Link to a purchase order"
+                >
+                  <Select
+                    placeholder="Select PO (optional)"
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    disabled={!!getFieldValue('grnId')}
+                    options={purchaseOrders.map((p) => ({
+                      label: p.poNumber,
+                      value: p.id,
+                    }))}
+                  />
+                </Form.Item>
+              )}
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -569,7 +607,64 @@ export default function InvoicesPage() {
                   label: g.grnNumber,
                   value: g.id,
                 }))}
+                onChange={(grnId) => {
+                  if (!grnId) {
+                    // Reset or allow manual selection if cleared
+                    return;
+                  }
+                  // Auto-populate from GRN -> PO -> Vendor
+                  const selectedGrn = grns.find(g => g.id === grnId);
+                  if (selectedGrn && selectedGrn.poId) {
+                    const linkedPo = purchaseOrders.find(p => p.id === selectedGrn.poId);
+                    
+                    const poAmount = linkedPo?.totalAmount 
+                      ? Number(linkedPo.totalAmount) 
+                      : (linkedPo && (linkedPo as any).total_amount ? Number((linkedPo as any).total_amount) : 0);
+
+                    form.setFieldsValue({
+                      poId: selectedGrn.poId,
+                      vendorId: linkedPo?.vendorId,
+                      amount: poAmount,
+                    });
+                  }
+                }}
               />
+            </Form.Item>
+            {/* Hint for auto-linking */}
+            <Form.Item noStyle shouldUpdate={(prev, curr) => prev.grnId !== curr.grnId}>
+              {({ getFieldValue }) => {
+                const grnId = getFieldValue('grnId');
+                if (!grnId) return null;
+                const poId = getFieldValue('poId');
+                const vendorId = getFieldValue('vendorId');
+                const vendor = vendors.find(v => v.id === vendorId);
+                const po = purchaseOrders.find(p => p.id === poId);
+                const grn = grns.find(g => g.id === grnId);
+
+                const qcFailed = grn?.qcRequired && grn?.qcStatus !== 'Passed';
+                
+                return (
+                  <>
+                   {qcFailed && (
+                     <Alert
+                       message="QC Validation Failed"
+                       description="Selected GRN has not passed QC. Invoice cannot be created."
+                       type="error"
+                       showIcon
+                       style={{ marginBottom: 16 }}
+                     />
+                   )}
+                   {!qcFailed && (
+                     <Alert 
+                       message={`Vendor ${vendor?.legalName || '...'} linked via GRN → PO ${po?.poNumber || '...'}`} 
+                       type="info" 
+                       showIcon 
+                       style={{ marginBottom: 16, fontSize: 12 }} 
+                     />
+                   )}
+                  </>
+                );
+              }}
             </Form.Item>
           </Col>
         </Row>
@@ -580,21 +675,23 @@ export default function InvoicesPage() {
 
         <Row gutter={16}>
           <Col span={12}>
+            <Form.Item name="currency" label="Currency" rules={[{ required: true, message: 'Required' }]}>
+              <DynamicSelect 
+                type="CURRENCY" 
+                placeholder="Select Currency" 
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
             <Form.Item
               name="amount"
-              label="Invoice Amount"
-              rules={[{ required: true, message: "Please enter invoice amount" }]}
-              tooltip="Total invoice amount"
+              label="Amount"
+              rules={[{ required: true, message: "Required" }]}
             >
               <InputNumber
                 style={{ width: "100%" }}
-                prefix="$"
-                formatter={(value) =>
-                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                }
-                parser={(value) =>
-                  (Number(value?.replace(/\$\s?|(,*)/g, "")) || 0) as 0
-                }
+                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                parser={(value) => (Number(value?.replace(/\$\s?|(,*)/g, "")) || 0) as 0}
                 placeholder="0.00"
                 min={0}
               />

@@ -17,6 +17,7 @@ import {
   Button,
   Space,
   Table,
+  AutoComplete,
 } from "antd";
 import {
   FileTextOutlined,
@@ -33,7 +34,8 @@ import {
   useUpdatePurchaseRequisition,
   useDeletePurchaseRequisition,
 } from "@/hooks/useProcurement";
-import { PurchaseRequisition, CreatePurchaseRequisitionDto, PurchaseRequisitionItem } from "@/lib/services";
+import { useRawMaterials } from "@/hooks/useRawMaterials";
+import { PurchaseRequisition, CreatePurchaseRequisitionDto, PurchaseRequisitionItem, purchaseRequisitionsApi } from "@/lib/services";
 import type { ColumnsType } from "antd/es/table";
 
 const { TextArea } = Input;
@@ -66,6 +68,7 @@ export default function PurchaseRequisitionsPage() {
 
   // API Hooks
   const { data: requisitions = [], isLoading, refetch } = usePurchaseRequisitions();
+  const { data: materials = [] } = useRawMaterials();
   const createRequisition = useCreatePurchaseRequisition();
   const updateRequisition = useUpdatePurchaseRequisition();
   const deleteRequisition = useDeletePurchaseRequisition();
@@ -224,10 +227,17 @@ export default function PurchaseRequisitionsPage() {
     []
   );
 
-  const handleView = useCallback((record: PurchaseRequisition) => {
-    setCurrentRequisition(record);
-    setDocumentViewerOpen(true);
-  }, []);
+  const handleView = useCallback(async (record: PurchaseRequisition) => {
+    try {
+      // Fetch full PR with items from API
+      const fullPR = await purchaseRequisitionsApi.getById(record.id);
+      setCurrentRequisition(fullPR);
+      setDocumentViewerOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch PR details", error);
+      modal.error({ title: "Error", content: "Failed to load requisition details" });
+    }
+  }, [modal]);
 
   const handleDelete = useCallback(
     (record: PurchaseRequisition) => {
@@ -285,7 +295,9 @@ export default function PurchaseRequisitionsPage() {
           ? (values.expectedDeliveryDate as dayjs.Dayjs).format("YYYY-MM-DD")
           : undefined,
         budgetReference: values.budgetReference as string | undefined,
-        items: items.filter(item => item.itemName), // Only include items with names
+        items: items
+          .filter(item => item.itemName)
+          .map(({ key, id, ...rest }) => rest), // Strip React key and id before sending
       };
 
       if (drawerMode === "create") {
@@ -305,7 +317,7 @@ export default function PurchaseRequisitionsPage() {
   const documentSections = useMemo(() => {
     if (!currentRequisition) return [];
 
-    return [
+    const sections: any[] = [
       {
         title: "Requisition Details",
         items: [
@@ -332,6 +344,27 @@ export default function PurchaseRequisitionsPage() {
         ],
       },
     ];
+
+    // Add items table if PR has items
+    if (currentRequisition.items && currentRequisition.items.length > 0) {
+      sections.push({
+        title: "Requested Items",
+        table: {
+          columns: [
+            { title: "Item Code", dataIndex: "itemCode", render: (val: unknown) => String(val || "-") },
+            { title: "Item Name", dataIndex: "itemName", render: (val: unknown) => String(val || "-") },
+            { title: "Category", dataIndex: "category", render: (val: unknown) => String(val || "-") },
+            { title: "UOM", dataIndex: "uom", render: (val: unknown) => String(val || "-") },
+            { title: "Quantity", dataIndex: "quantity", render: (val: unknown) => <Text strong>{String(val ?? 0)}</Text> },
+            { title: "Est. Unit Cost", dataIndex: "estimatedUnitCost", render: (val: unknown) => val ? `₨ ${Number(val).toLocaleString()}` : "-" },
+            { title: "Total Cost", dataIndex: "totalCost", render: (val: unknown) => val ? <Text strong style={{ color: "#52c41a" }}>₨ {Number(val).toLocaleString()}</Text> : "-" },
+          ],
+          data: currentRequisition.items.map((item, index) => ({ ...item, key: item.id || index })),
+        },
+      });
+    }
+
+    return sections;
   }, [currentRequisition]);
 
   // Items table columns for drawer
@@ -341,11 +374,42 @@ export default function PurchaseRequisitionsPage() {
       dataIndex: "itemName",
       key: "itemName",
       render: (_: string, __: PurchaseRequisitionItem, index: number) => (
-        <Input
-          value={items[index]?.itemName}
-          onChange={(e) => updateItem(index, "itemName", e.target.value)}
-          placeholder="Item name"
+        <AutoComplete
+          placeholder="Enter material name"
           size="small"
+          style={{ width: "100%" }}
+          value={items[index]?.itemName || ""}
+          options={materials.map(m => ({ label: `${m.name} (${m.code})`, value: m.name }))}
+          onSelect={(val) => {
+            const material = materials.find(m => m.name === val);
+            if (material) {
+              updateItem(index, "itemName", material.name);
+              updateItem(index, "itemCode", material.code);
+              updateItem(index, "uom", material.unitOfMeasure);
+              updateItem(index, "category", material.type || "");
+            }
+          }}
+          onChange={(val) => {
+            updateItem(index, "itemName", val);
+          }}
+          filterOption={(inputValue, option) =>
+            option!.value.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1
+          }
+        />
+      ),
+    },
+    {
+      title: "Item Code",
+      dataIndex: "itemCode",
+      key: "itemCode",
+      width: 120,
+      render: (_: string, __: PurchaseRequisitionItem, index: number) => (
+        <Input
+          value={items[index]?.itemCode}
+          onChange={(e) => updateItem(index, "itemCode", e.target.value)}
+          placeholder="Code"
+          size="small"
+          disabled
         />
       ),
     },
@@ -356,7 +420,7 @@ export default function PurchaseRequisitionsPage() {
       width: 120,
       render: (_: string, __: PurchaseRequisitionItem, index: number) => (
         <DynamicSelect
-          type="CATEGORY"
+          type="pr_category"
           value={items[index]?.category}
           onChange={(val) => updateItem(index, "category", val)}
           placeholder="Select"
@@ -365,6 +429,7 @@ export default function PurchaseRequisitionsPage() {
         />
       ),
     },
+
     {
       title: "Qty *",
       dataIndex: "quantity",

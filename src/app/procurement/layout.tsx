@@ -15,6 +15,7 @@ import {
   SoundFilled,
   FileProtectOutlined,
   DollarOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -60,6 +61,11 @@ const menuItems = [
     key: "/procurement/payments",
     icon: <DollarOutlined />,
     label: "Payments",
+  },
+  {
+    key: "/procurement/rmqc",
+    icon: <CheckCircleOutlined />,
+    label: "RMQC",
   },
 ];
 

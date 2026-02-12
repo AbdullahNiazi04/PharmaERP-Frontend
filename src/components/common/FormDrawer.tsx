@@ -48,6 +48,9 @@ interface FormDrawerProps {
   
   // Optional transform for draft data (e.g. converting date strings to dayjs)
   onDraftLoaded?: (data: Record<string, unknown>) => Record<string, unknown>;
+  
+  // Optional listener for form changes
+  onValuesChange?: (changedValues: any, allValues: any) => void;
 }
 
 export default function FormDrawer({
@@ -69,6 +72,7 @@ export default function FormDrawer({
   currentStep = 0,
   onStepChange,
   onDraftLoaded,
+  onValuesChange,
 }: FormDrawerProps) {
   const [hasDraft, setHasDraft] = useState(false);
   const [draftAge, setDraftAge] = useState<string | null>(null);
@@ -112,13 +116,18 @@ export default function FormDrawer({
   }, [open, form, initialValues, mode, storageKey, onDraftLoaded]);
 
   // Auto-save draft on form changes
-  const handleValuesChange = useCallback(() => {
+  const handleValuesChange = useCallback((changedValues: any, allValues: any) => {
     if (mode === "view") return;
     
+    // Call parent listener if provided
+    if (onValuesChange) {
+      onValuesChange(changedValues, allValues);
+    }
+    
     setFormChanged(true);
-    const currentValues = form.getFieldsValue(true);
-    formStorage.save(storageKey, currentValues, entityId);
-  }, [form, storageKey, entityId, mode]);
+    // Use allValues directly or getFieldsValue (which might be same)
+    formStorage.save(storageKey, allValues, entityId);
+  }, [form, storageKey, entityId, mode, onValuesChange]);
 
   // Restore draft
   const handleRestoreDraft = useCallback(() => {

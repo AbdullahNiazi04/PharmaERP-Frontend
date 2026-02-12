@@ -38,9 +38,11 @@ import {
   useUpdateGoodsReceiptNote,
   useDeleteGoodsReceiptNote,
   usePurchaseOrders,
+  useAvailablePurchaseOrdersForGRN,
   useVendors,
+  useUpdateGRNStatus,
 } from "@/hooks/useProcurement";
-import { GoodsReceiptNote, CreateGoodsReceiptNoteDto, GoodsReceiptItem, purchaseOrdersApi } from "@/lib/services";
+import { GoodsReceiptNote, CreateGoodsReceiptNoteDto, GoodsReceiptItem, purchaseOrdersApi, goodsReceiptNotesApi } from "@/lib/services";
 import type { ColumnsType } from "antd/es/table";
 
 const { Option } = Select;
@@ -52,14 +54,6 @@ const statusColors: Record<string, string> = {
   Pending: "orange",
   Approved: "success",
   Rejected: "error",
-};
-
-// QC Status color mapping
-const qcStatusColors: Record<string, string> = {
-  Pending: "orange",
-  Passed: "green",
-  Failed: "red",
-  Skipped: "default",
 };
 
 export default function GoodsReceiptNotesPage() {
@@ -74,10 +68,12 @@ export default function GoodsReceiptNotesPage() {
   // API Hooks
   const { data: grns = [], isLoading, refetch } = useGoodsReceiptNotes();
   const { data: purchaseOrders = [] } = usePurchaseOrders();
+  const { data: availablePurchaseOrders = [] } = useAvailablePurchaseOrdersForGRN();
   const { data: vendors = [] } = useVendors();
   const createGRN = useCreateGoodsReceiptNote();
   const updateGRN = useUpdateGoodsReceiptNote();
   const deleteGRN = useDeleteGoodsReceiptNote();
+  const updateGRNStatus = useUpdateGRNStatus();
 
   // Get PO number
   const getPONumber = useCallback((poId: string) => {
@@ -88,11 +84,10 @@ export default function GoodsReceiptNotesPage() {
   // Calculate summary stats
   const summaryStats = useMemo(() => {
     const total = grns.length;
-    const pending = grns.filter(g => g.qcStatus === "Pending").length;
-    const approved = grns.filter(g => g.qcStatus === "Passed").length;
-    const rejected = grns.filter(g => g.qcStatus === "Failed").length;
+    const qcRequired = grns.filter(g => g.qcRequired === true).length;
+    const stockPosted = grns.filter(g => g.stockPosted === true).length;
 
-    return { total, pending, approved, rejected };
+    return { total, qcRequired, stockPosted };
   }, [grns]);
 
   // Table columns
@@ -111,15 +106,61 @@ export default function GoodsReceiptNotesPage() {
         ),
       },
       {
+        title: "QC Required",
+        dataIndex: "qcRequired",
+        key: "qcRequired",
+        width: 130,
+        render: (qcRequired: boolean) => (
+          qcRequired 
+            ? <Tag color="orange">Pending QC</Tag>
+            : <Tag color="default">No</Tag>
+        ),
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        width: 140,
+        render: (status: string, record: GoodsReceiptNote) => (
+          <Select
+            value={status || "Draft"}
+            size="small"
+            style={{ width: 120 }}
+            onChange={(value) => {
+              updateGRNStatus.mutate({ id: record.id, data: { status: value } });
+            }}
+            options={[
+              { label: <Tag color="default">Draft</Tag>, value: "Draft" },
+              { label: <Tag color="processing">Submitted</Tag>, value: "Submitted" },
+              { label: <Tag color="success">Approved</Tag>, value: "Approved" },
+            ]}
+          />
+        ),
+      },
+      {
         title: "QC Status",
         dataIndex: "qcStatus",
         key: "qcStatus",
-        width: 130,
-        render: (status: string) => (
-          <Tag color={qcStatusColors[status] || "default"}>
-            {status || "Pending"}
-          </Tag>
-        ),
+        width: 140,
+        render: (qcStatus: string, record: GoodsReceiptNote) => {
+          if (!record.qcRequired) return <Tag>N/A</Tag>;
+          return (
+            <Select
+              value={qcStatus || "Pending"}
+              size="small"
+              style={{ width: 120 }}
+              onChange={(value) => {
+                updateGRNStatus.mutate({ id: record.id, data: { qcStatus: value } });
+              }}
+              options={[
+                { label: <Tag color="orange">Pending</Tag>, value: "Pending" },
+                { label: <Tag color="success">Passed</Tag>, value: "Passed" },
+                { label: <Tag color="error">Failed</Tag>, value: "Failed" },
+                { label: <Tag color="default">Skipped</Tag>, value: "Skipped" },
+              ]}
+            />
+          );
+        },
       },
       {
         title: "Purchase Order",
@@ -171,7 +212,7 @@ export default function GoodsReceiptNotesPage() {
   const summaryComponent = useMemo(
     () => (
       <Row gutter={16} style={{ marginBottom: 8 }}>
-        <Col span={6}>
+        <Col span={8}>
           <Card size="small" style={{ background: "linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%)", border: "none" }}>
             <Statistic
               title={<span style={{ fontSize: 12, color: "#0958d9" }}>Total GRNs</span>}
@@ -181,33 +222,23 @@ export default function GoodsReceiptNotesPage() {
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={8}>
           <Card size="small" style={{ background: "linear-gradient(135deg, #fff7e6 0%, #ffd591 100%)", border: "none" }}>
             <Statistic
               title={<span style={{ fontSize: 12, color: "#d46b08" }}>Pending QC</span>}
-              value={summaryStats.pending}
+              value={summaryStats.qcRequired}
               styles={{ content: { fontSize: 20, color: "#d46b08" } }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={8}>
           <Card size="small" style={{ background: "linear-gradient(135deg, #f6ffed 0%, #b7eb8f 100%)", border: "none" }}>
             <Statistic
-              title={<span style={{ fontSize: 12, color: "#389e0d" }}>QC Passed</span>}
-              value={summaryStats.approved}
+              title={<span style={{ fontSize: 12, color: "#389e0d" }}>Stock Posted</span>}
+              value={summaryStats.stockPosted}
               styles={{ content: { fontSize: 20, color: "#389e0d" } }}
               prefix={<CheckCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small" style={{ background: "linear-gradient(135deg, #fff1f0 0%, #ffa39e 100%)", border: "none" }}>
-            <Statistic
-              title={<span style={{ fontSize: 12, color: "#cf1322" }}>QC Failed</span>}
-              value={summaryStats.rejected}
-              styles={{ content: { fontSize: 20, color: "#cf1322" } }}
-              prefix={<ExclamationCircleOutlined />}
             />
           </Card>
         </Col>
@@ -250,7 +281,7 @@ export default function GoodsReceiptNotesPage() {
       return {
         // grnNumber: Left blank for auto-generation
         grnDate: dayjs(),
-        qcStatus: "Pending",
+        qcRequired: true, // Default to requiring QC
       };
     }
 
@@ -273,19 +304,32 @@ export default function GoodsReceiptNotesPage() {
   }, []);
 
   const handleEdit = useCallback(
-    (record: GoodsReceiptNote) => {
-      setCurrentGRN(record);
-      setDrawerMode("edit");
-      setItems(record.items?.map((item, idx) => ({ ...item, key: item.id || `edit-${idx}-${Date.now()}` })) || []);
-      setDrawerOpen(true);
+    async (record: GoodsReceiptNote) => {
+      try {
+        // Fetch full GRN with items from API to ensure items are loaded
+        const fullGRN = await goodsReceiptNotesApi.getById(record.id);
+        setCurrentGRN(fullGRN);
+        setDrawerMode("edit");
+        setItems(fullGRN.items?.map((item, idx) => ({ ...item, key: item.id || `edit-${idx}-${Date.now()}` })) || []);
+        setDrawerOpen(true);
+      } catch (error) {
+        console.error("Failed to fetch GRN details", error);
+        modal.error({ title: "Error", content: "Failed to load GRN details for editing" });
+      }
     },
-    []
+    [modal]
   );
 
-  const handleView = useCallback((record: GoodsReceiptNote) => {
-    setCurrentGRN(record);
-    setDocumentViewerOpen(true);
-  }, []);
+  const handleView = useCallback(async (record: GoodsReceiptNote) => {
+    try {
+      const fullGRN = await goodsReceiptNotesApi.getById(record.id);
+      setCurrentGRN(fullGRN);
+      setDocumentViewerOpen(true);
+    } catch (error) {
+      console.error("Failed to fetch GRN details", error);
+      modal.error({ title: "Error", content: "Failed to load GRN details" });
+    }
+  }, [modal]);
 
   const handleDelete = useCallback(
     (record: GoodsReceiptNote) => {
@@ -319,13 +363,14 @@ export default function GoodsReceiptNotesPage() {
         grnDate: (values.grnDate as dayjs.Dayjs).format("YYYY-MM-DD"),
         poId: values.poId as string,
         warehouseLocation: values.warehouseLocation as string | undefined,
-        receivedBy: values.receivedBy as string | undefined,
+        receivedBy: values.receivedBy as string,
         qcRequired: values.qcRequired as boolean | undefined,
-        qcStatus: values.qcStatus as "Pending" | "Passed" | "Failed" | "Skipped" | undefined,
         qcRemarks: values.qcRemarks as string | undefined,
         stockPosted: values.stockPosted as boolean | undefined,
         inventoryLocation: values.inventoryLocation as string | undefined,
-        items: items.filter(item => item.receivedQty > 0),
+        items: items
+          .filter(item => item.receivedQty > 0)
+          .map(({ key, id, ...rest }) => rest), // Strip React key and id before sending
       };
 
       if (drawerMode === "create") {
@@ -360,8 +405,7 @@ export default function GoodsReceiptNotesPage() {
       {
         title: "Quality Control",
         items: [
-          { label: "QC Required", value: currentGRN.qcRequired ? "Yes" : "No" },
-          { label: "QC Status", value: <Tag color={qcStatusColors[currentGRN.qcStatus || ""]}>{currentGRN.qcStatus}</Tag> },
+          { label: "QC Required", value: currentGRN.qcRequired ? <Tag color="orange">Yes - Pending QC</Tag> : <Tag>No</Tag> },
           { label: "QC Remarks", value: currentGRN.qcRemarks, span: 2 },
         ],
       },
@@ -371,6 +415,22 @@ export default function GoodsReceiptNotesPage() {
           { label: "PO Number", value: po?.poNumber },
           { label: "Stock Posted", value: currentGRN.stockPosted ? <Tag color="green">Yes</Tag> : <Tag>No</Tag> },
         ],
+      },
+      {
+        title: "Line Items",
+        table: {
+          columns: [
+            { title: "Code", dataIndex: "itemCode", render: (val: unknown) => String(val || "-") },
+            { title: "Name", dataIndex: "itemName", render: (val: unknown) => String(val || "-") },
+            { title: "Ordered", dataIndex: "orderedQty", render: (val: unknown) => String(val ?? 0) },
+            { title: "Received", dataIndex: "receivedQty", render: (val: unknown) => <Text strong style={{ color: "#52c41a" }}>{String(val ?? 0)}</Text> },
+            { title: "Rejected", dataIndex: "rejectedQty", render: (val: unknown) => Number(val) > 0 ? <Text type="danger">{String(val)}</Text> : "0" },
+            { title: "Batch #", dataIndex: "batchNumber", render: (val: unknown) => String(val || "-") },
+            { title: "Expiry", dataIndex: "expiryDate", render: (val: unknown) => val ? dayjs(val as string).format("DD MMM YYYY") : "-" },
+            { title: "Condition", dataIndex: "storageCondition", render: (val: unknown) => String(val || "-") },
+          ],
+          data: currentGRN.items?.map((item, index) => ({ ...item, key: item.id || index })) || [],
+        },
       },
     ];
   }, [currentGRN, purchaseOrders]);
@@ -540,7 +600,7 @@ export default function GoodsReceiptNotesPage() {
                 placeholder="Select PO"
                 showSearch
                 optionFilterProp="label"
-                options={purchaseOrders.map((p) => ({
+                options={availablePurchaseOrders.map((p) => ({
                   label: `${p.poNumber} - ${vendors.find(v => v.id === p.vendorId)?.legalName || ""}`,
                   value: p.id,
                 }))}
@@ -580,8 +640,12 @@ export default function GoodsReceiptNotesPage() {
 
         <Row gutter={16}>
           <Col span={8}>
-            <Form.Item name="receivedBy" label="Received By">
-              <Input prefix={<UserOutlined />} placeholder="Name" />
+            <Form.Item
+              name="receivedBy"
+              label="Received By"
+              rules={[{ required: true, message: "Received By is required for audit compliance" }]}
+            >
+              <Input prefix={<UserOutlined />} placeholder="Name of person receiving goods" />
             </Form.Item>
           </Col>
           <Col span={8}>
@@ -601,22 +665,12 @@ export default function GoodsReceiptNotesPage() {
         </Divider>
 
         <Row gutter={16}>
-          <Col span={6}>
+          <Col span={8}>
             <Form.Item name="qcRequired" label="QC Required" valuePropName="checked">
               <Switch />
             </Form.Item>
           </Col>
-          <Col span={6}>
-            <Form.Item name="qcStatus" label="QC Status">
-              <Select placeholder="Select status">
-                <Option value="Pending">Pending</Option>
-                <Option value="Passed">Passed</Option>
-                <Option value="Failed">Failed</Option>
-                <Option value="Skipped">Skipped</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={6}>
+          <Col span={8}>
             <Form.Item name="stockPosted" label="Stock Posted" valuePropName="checked">
               <Switch />
             </Form.Item>
@@ -663,12 +717,15 @@ export default function GoodsReceiptNotesPage() {
               : undefined
           }
           status={
-            currentGRN.qcStatus
+            currentGRN.qcRequired
               ? {
-                  text: currentGRN.qcStatus,
-                  color: qcStatusColors[currentGRN.qcStatus] || "default",
+                  text: "Pending QC",
+                  color: "orange",
                 }
-              : undefined
+              : {
+                  text: "No QC Required",
+                  color: "default",
+                }
           }
           sections={documentSections}
           signatures={[
