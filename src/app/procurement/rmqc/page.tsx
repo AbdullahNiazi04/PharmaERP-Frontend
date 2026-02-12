@@ -72,6 +72,13 @@ export default function RmqcListPage() {
       width: 150,
     },
     {
+      title: "Item Details",
+      dataIndex: "description",
+      key: "description",
+      width: 300,
+      render: (text: string) => <Text type="secondary" style={{ fontSize: 11 }}>{text || "N/A"}</Text>,
+    },
+    {
       title: "Status",
       dataIndex: "status",
       key: "status",
