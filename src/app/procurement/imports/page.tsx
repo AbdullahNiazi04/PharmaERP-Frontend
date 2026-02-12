@@ -279,20 +279,15 @@ export default function ImportsPage() {
       />
 
       <FormDrawer
-        title={drawerMode === "create" ? "New Import Order" : "Edit Import Order"}
+        title="Import Order"
+        formKey="import-order"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         width={720}
-        footer={
-          <div style={{ textAlign: "right" }}>
-            <Button onClick={() => setDrawerOpen(false)} style={{ marginRight: 8 }}>
-              Cancel
-            </Button>
-            <Button type="primary" onClick={form.submit} loading={createImport.isPending || updateImport.isPending}>
-              {drawerMode === "create" ? "Create Order" : "Update Changes"}
-            </Button>
-          </div>
-        }
+        mode={drawerMode}
+        form={form}
+        onSubmit={handleSubmit}
+        loading={createImport.isPending || updateImport.isPending}
       >
         <Form
           form={form}
@@ -314,7 +309,7 @@ export default function ImportsPage() {
             </Col>
           </Row>
 
-          <Divider orientation="left">Currency & Amount</Divider>
+          <Divider orientation={"left" as any}>Currency & Amount</Divider>
           
           <Row gutter={16}>
              <Col span={6}>
@@ -343,7 +338,7 @@ export default function ImportsPage() {
              </Col>
           </Row>
 
-          <Divider orientation="left">Shipment Details</Divider>
+          <Divider orientation={"left" as any}>Shipment Details</Divider>
 
           <Row gutter={16}>
              <Col span={8}>
@@ -402,29 +397,29 @@ export default function ImportsPage() {
              </Col>
           </Row>
 
-          {drawerMode === 'edit' && (
+          {/* {drawerMode === 'edit' && (
             <div style={{ marginTop: 16, textAlign: 'right' }}>
                <Button icon={<FileTextOutlined />} onClick={() => setDocumentViewerOpen(true)}>
-                 Manage Documents {currentImport?.import_documents?.length ? `(${currentImport.import_documents.length})` : ''}
+                 Manage Documents {(currentImport as any)?.import_documents?.length ? `(${(currentImport as any).import_documents.length})` : ''}
                </Button>
             </div>
-          )}
+          )} */}
 
         </Form>
       </FormDrawer>
 
-      <DocumentViewer
+      {/* <DocumentViewer
         open={documentViewerOpen}
         onClose={() => setDocumentViewerOpen(false)}
-        documents={[]} // TODO: wire up documents from currentImport properly
+        documents={[]} 
         readOnly={false}
-        onUpload={async (file) => {
+        onUpload={async (file: any) => {
           message.info("Upload not implemented in this demo");
         }}
-        onDelete={async (id) => {
+        onDelete={async (id: any) => {
             message.info("Delete not implemented in this demo");
         }}
-      />
+      /> */}
     </div>
   );
 }
