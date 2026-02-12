@@ -91,6 +91,7 @@ interface EnterpriseDataTableProps<T> {
   showSelection?: boolean;
   customActions?: (record: T) => React.ReactNode;
   summary?: React.ReactNode;
+  extraContent?: React.ReactNode;
   
   // Server-side features
   serverSide?: boolean;
@@ -122,6 +123,7 @@ export default function EnterpriseDataTable<T extends object>({
   showSelection = true,
   customActions,
   summary,
+  extraContent,
   serverSide = false,
   total,
   onTableChange,
@@ -599,6 +601,7 @@ export default function EnterpriseDataTable<T extends object>({
         </div>
 
         <Space wrap size="small">
+          {extraContent}
           {/* Global Search */}
           <Input
             placeholder="Global search..."
