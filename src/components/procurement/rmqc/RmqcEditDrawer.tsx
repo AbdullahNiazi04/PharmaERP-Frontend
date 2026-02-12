@@ -23,7 +23,7 @@ export default function RmqcEditDrawer({ open, onClose, inspection, onSuccess }:
       fetchInspectors();
       if (inspection) {
         form.setFieldsValue({
-          inspector_id: inspection.inspector_id,
+          inspector_id: inspection.inspectorId,
           status: inspection.status,
           description: inspection.description,
         });
@@ -49,6 +49,10 @@ export default function RmqcEditDrawer({ open, onClose, inspection, onSuccess }:
     if (!inspection) return;
     setLoading(true);
     try {
+        // Values are already snake_case if form items are named snake_case.
+        // If form items are camel, we need to map them.
+        // Form items are: inspector_id, status, description.
+        // So values = { inspector_id: "...", ... } which matches backend DTO.
       await rmqcApi.update(inspection.id, values);
       message.success('Inspection updated successfully');
       onSuccess();

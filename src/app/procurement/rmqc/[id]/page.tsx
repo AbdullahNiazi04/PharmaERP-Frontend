@@ -48,7 +48,7 @@ export default function RmqcDetailPage() {
     if (inspection) {
       form.setFieldsValue({
         description: inspection.description,
-        inspector_name: inspection.inspector_name,
+        inspector_name: inspection.inspectorName,
       });
     }
   }, [inspection, form]);
@@ -121,14 +121,14 @@ export default function RmqcDetailPage() {
         >
           <Descriptions bordered column={2}>
             <Descriptions.Item label="Inspection ID">{inspection.id}</Descriptions.Item>
-            <Descriptions.Item label="Date">{dayjs(inspection.inspection_date).format("YYYY-MM-DD HH:mm")}</Descriptions.Item>
-            <Descriptions.Item label="Inspector">{inspection.inspector_name}</Descriptions.Item>
-            <Descriptions.Item label="GRN Number">{inspection.goods_receipt_notes?.grn_number}</Descriptions.Item>
-            <Descriptions.Item label="Batch Number">{inspection.raw_material_batches?.batch_number || 'N/A'}</Descriptions.Item>
+            <Descriptions.Item label="Date">{dayjs(inspection.inspectionDate).format("YYYY-MM-DD HH:mm")}</Descriptions.Item>
+            <Descriptions.Item label="Inspector">{inspection.inspectorName}</Descriptions.Item>
+            <Descriptions.Item label="GRN Number">{inspection.goodsReceiptNotes?.grnNumber}</Descriptions.Item>
+            <Descriptions.Item label="Batch Number">{inspection.rawMaterialBatches?.batchNumber || 'N/A'}</Descriptions.Item>
             <Descriptions.Item label="Material">
-              {inspection.raw_material_batches?.raw_material_inventory?.raw_materials?.name || 'N/A'} 
+              {inspection.rawMaterialBatches?.rawMaterialInventory?.rawMaterials?.name || 'N/A'} 
               <Text type="secondary" style={{ marginLeft: 8 }}>
-                ({inspection.raw_material_batches?.raw_material_inventory?.raw_materials?.code})
+                ({inspection.rawMaterialBatches?.rawMaterialInventory?.rawMaterials?.code})
               </Text>
             </Descriptions.Item>
             <Descriptions.Item label="Description" span={2}>{inspection.description || 'No description provided'}</Descriptions.Item>

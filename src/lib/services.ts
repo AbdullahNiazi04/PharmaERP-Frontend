@@ -37,18 +37,18 @@ export interface Vendor {
 
 export interface RmqcInspection {
   id: string;
-  grn_id: string;
-  raw_material_id?: string;
-  inspection_date: string;
-  inspector_name: string;
+  grnId: string;
+  rawMaterialId?: string;
+  inspectionDate: string;
+  inspectorName: string;
   description?: string;
   status: string;
-  inspector_id?: string;
+  inspectorId?: string;
   images?: string[];
   documents?: string[];
-  created_at?: string;
-  updated_at?: string;
-  completed_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  completedAt?: string;
   // API returns camelCase for relations
   goodsReceiptNotes?: {
     grnNumber: string;
@@ -901,7 +901,7 @@ export const rmqcApi = {
     const response = await api.get('/rmqc');
     return response.data;
   },
-  getOne: async (id: string): Promise<RmqcInspection> => {
+  getById: async (id: string): Promise<RmqcInspection> => {
     const response = await api.get(`/rmqc/${id}`);
     return response.data;
   },

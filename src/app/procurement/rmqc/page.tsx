@@ -54,7 +54,15 @@ export default function RmqcListPage() {
       title: "Inspection ID",
       dataIndex: "id",
       key: "id",
-      render: (id: string) => id.slice(0, 8),
+      render: (id: string) => (
+        <Button 
+          type="link" 
+          onClick={() => router.push(`/procurement/rmqc/${id}`)}
+          style={{ padding: 0 }}
+        >
+          {id.slice(0, 8)}
+        </Button>
+      ),
     },
     {
       title: "GRN Number",
@@ -68,26 +76,26 @@ export default function RmqcListPage() {
     },
     {
       title: "Batch Number",
-      key: "batch_number",
+      key: "batchNumber",
       render: (_: any, record: RmqcInspection) => record.rawMaterialBatches?.batchNumber || "N/A",
     },
     {
       title: "Material",
-      key: "material_name",
+      key: "materialName",
       render: (_: any, record: RmqcInspection) => 
         record.rawMaterialBatches?.rawMaterialInventory?.rawMaterials?.name || "N/A",
     },
     {
       title: "Inspection Date",
-      dataIndex: "inspection_date",
-      key: "inspection_date",
+      dataIndex: "inspectionDate",
+      key: "inspectionDate",
       render: (date: string) => date ? dayjs(date).format("YYYY-MM-DD HH:mm") : "N/A",
-      sorter: (a: RmqcInspection, b: RmqcInspection) => dayjs(a.inspection_date).unix() - dayjs(b.inspection_date).unix(),
+      sorter: (a: RmqcInspection, b: RmqcInspection) => dayjs(a.inspectionDate).unix() - dayjs(b.inspectionDate).unix(),
     },
     {
       title: "Inspector",
-      dataIndex: "inspector_name",
-      key: "inspector_name",
+      dataIndex: "inspectorName",
+      key: "inspectorName",
     },
     {
       title: "Item Details",
@@ -117,13 +125,6 @@ export default function RmqcListPage() {
       fixed: "right" as const,
       render: (_: any, record: RmqcInspection) => (
         <Space>
-          <Tooltip title="View">
-            <Button 
-              type="text" 
-              icon={<EyeOutlined />} 
-              onClick={() => router.push(`/procurement/rmqc/${record.id}`)}
-            />
-          </Tooltip>
           <Tooltip title="Edit">
              <Button
                type="text"
@@ -158,6 +159,7 @@ export default function RmqcListPage() {
         data={inspections}
         loading={isLoading}
         rowKey="id"
+        showActions={false}
         onRefresh={refetch}
       />
       <RmqcEditDrawer 
