@@ -51,7 +51,7 @@ const { Text } = Typography;
 // Status color mapping
 const statusColors: Record<string, string> = {
   Draft: "default",
-  Pending: "orange",
+  Submitted: "orange",
   Approved: "success",
   Rejected: "error",
 };

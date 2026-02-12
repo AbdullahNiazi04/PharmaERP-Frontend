@@ -375,7 +375,7 @@ export interface GoodsReceiptNote {
   qcRemarks?: string;
   stockPosted?: boolean;
   inventoryLocation?: string;
-  status?: 'Draft' | 'Pending' | 'Approved' | 'Rejected';
+  status?: 'Draft' | 'Submitted' | 'Approved' | 'Rejected';
   items?: GoodsReceiptItem[];
   createdAt?: string;
   updatedAt?: string;

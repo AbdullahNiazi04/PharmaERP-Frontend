@@ -133,14 +133,14 @@ export default function ProcurementDashboardPage() {
     const gmpCertified = vendors.filter((v) => v.isGmpCertified).length;
 
     // Requisitions
-    const pendingReqs = requisitions.filter((r) => r.status === "Submitted").length;
+    const pendingReqs = requisitions.filter((r) => r.status === "Pending_Approval").length;
     const approvedReqs = requisitions.filter((r) => r.status === "Approved").length;
     const urgentReqs = requisitions.filter((r) => r.priority === "Urgent" && r.status !== "Approved").length;
 
     // Purchase Orders
     const draftPOs = purchaseOrders.filter((p) => p.status === "Draft").length;
-    const submittedPOs = purchaseOrders.filter((p) => p.status === "Submitted").length;
-    const completedPOs = purchaseOrders.filter((p) => p.status === "Completed").length;
+    const submittedPOs = purchaseOrders.filter((p) => p.status === "Issued").length;
+    const completedPOs = purchaseOrders.filter((p) => p.status === "Closed").length;
     const totalPOValue = purchaseOrders.reduce((sum, po) => sum + (po.totalAmount || 0), 0);
 
     // GRNs
