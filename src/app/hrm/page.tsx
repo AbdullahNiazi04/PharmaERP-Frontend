@@ -323,7 +323,7 @@ export default function HRMDashboardPage() {
             size="small"
             style={{ borderRadius: 12 }}
           >
-            <Space direction="vertical" style={{ width: "100%" }}>
+            <Space orientation="vertical" style={{ width: "100%" }}>
               <Link href="/hrm/employees">
                 <Button block type="default" icon={<TeamOutlined />}>
                   Add New Employee

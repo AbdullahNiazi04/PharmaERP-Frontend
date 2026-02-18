@@ -93,7 +93,7 @@ export default function RmqcDetailPage() {
         Back to List
       </Button>
 
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <Card
           title={
             <Space>

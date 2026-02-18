@@ -84,21 +84,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    setMounted(true);
-    
-    // Initialize sound settings from localStorage
+    // Initialize sound settings from localStorage (client-only)
     const soundEnabled = localStorage.getItem('soundEnabled');
     if (soundEnabled !== null) {
       soundManager.setEnabled(JSON.parse(soundEnabled));
     }
   }, []);
 
-  if (!mounted) {
-    return null;
-  }
 
   return (
     <ReduxProvider store={store}>

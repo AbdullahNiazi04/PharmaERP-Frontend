@@ -304,7 +304,7 @@ export default function FinishedGoodsDashboardPage() {
             size="small"
             style={{ borderRadius: 12 }}
           >
-            <Space direction="vertical" style={{ width: "100%" }}>
+            <Space orientation="vertical" style={{ width: "100%" }}>
               <Link href="/finished-goods/products">
                 <Button block type="default" icon={<MedicineBoxOutlined />}>
                   Add New Product

@@ -275,7 +275,7 @@ export default function RawMaterialsDashboardPage() {
             size="small"
             style={{ borderRadius: 12 }}
           >
-            <Space direction="vertical" style={{ width: "100%" }}>
+            <Space orientation="vertical" style={{ width: "100%" }}>
               <Link href="/raw-materials/materials">
                 <Button block type="default" icon={<ExperimentOutlined />}>
                   Add New Raw Material

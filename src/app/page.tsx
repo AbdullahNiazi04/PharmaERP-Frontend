@@ -251,7 +251,7 @@ export default function DashboardPage() {
                     <div style={{ marginBottom: 4 }}>
                       <Text strong>{item.name}</Text>
                     </div>
-                    <Space direction="vertical" style={{ width: "100%" }}>
+                    <Space orientation="vertical" style={{ width: "100%" }}>
                       <div
                         style={{
                           display: "flex",
